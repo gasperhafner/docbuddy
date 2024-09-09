@@ -1,0 +1,948 @@
+Shipment Tracking Documentation
+Overview
+The shipment tracking system is designed to provide real-time updates and detailed information about the status of a shipment. It includes various components that interact to display the current state of a shipment, including the driver's location, estimated time of arrival (ETA), and other relevant details. This documentation will cover the rules, behaviors, and conditions for displaying different screens, as well as the data tracked by PostHog.
+
+Key Components
+Task Tracking Data: This is the core data structure that holds all the relevant information about a shipment task. It includes details such as the order number, status, customer information, driver details, and more.
+
+Frontend (JavaScript): The frontend handles the display logic and user interactions. It fetches the task tracking data, updates the UI, and manages the different screen flows based on the task status.
+
+Backend (Ruby): The backend prepares the tracking data and provides various helper methods to fetch additional information like driver details, available pickup methods, etc.
+
+Screen Flows and Conditions
+1. Unassigned Page
+Condition: Displayed when the task is not yet assigned to a driver.
+Rules:
+The task status is unassigned.
+The page shows a message indicating that the task is awaiting assignment.
+2. Assigned Page
+Condition: Displayed when the task is assigned to a driver but not yet started.
+Rules:
+The task status is assigned.
+The page shows the driver's details, including name, rating, and contact information.
+The ETA and current stops before the task are displayed.
+3. Active Page
+Condition: Displayed when the task is currently being executed by the driver.
+Rules:
+The task status is active.
+The page shows the driver's real-time location on a map.
+The ETA is updated dynamically based on the driver's location.
+The page includes options for contacting the driver via call or SMS.
+4. Completed Page
+Condition: Displayed when the task is completed.
+Rules:
+The task status is completed.
+The page shows the completion time and any reviews or feedback options.
+If the task was completed more than 30 minutes ago, a specific message is displayed.
+The page hides the app download banner if it is present.
+5. Failed Page
+Condition: Displayed when the task has failed.
+Rules:
+The task status is failed.
+The page shows the failure reason and any relevant details.
+The page hides the app download banner if it is present.
+Time-Based Conditions
+Completed More Than 30 Minutes Ago: If the task was completed more than 30 minutes ago, specific messages and options are displayed.
+Task Expiration: If the task was completed more than 24 hours ago, it is considered expired, and a message indicating the expiration is shown.
+PostHog Tracking
+PostHog is used to track various user interactions and events within the shipment tracking system. The following events are tracked:
+
+Page Views: Each time a user views a different page (Unassigned, Assigned, Active, Completed, Failed).
+Driver Contact: When a user clicks to call or SMS the driver.
+ETA Updates: When the ETA is updated based on the driver's location.
+Task Status Changes: When the task status changes (e.g., from assigned to active).
+App Download Banner: When the app download banner is shown or dismissed.
+Detailed Explanation of Each Screen Flow
+Unassigned Page
+Displayed When: The task status is unassigned.
+Behavior: Shows a message indicating that the task is awaiting assignment. No driver details or ETA are displayed.
+Assigned Page
+Displayed When: The task status is assigned.
+Behavior:
+Shows the driver's details, including name, rating, and contact information.
+Displays the ETA and the number of current stops before the task.
+Provides options to contact the driver via call or SMS.
+Active Page
+Displayed When: The task status is active.
+Behavior:
+Shows the driver's real-time location on a map.
+Dynamically updates the ETA based on the driver's location.
+Includes options for contacting the driver via call or SMS.
+Completed Page
+Displayed When: The task status is completed.
+Behavior:
+Shows the completion time and any reviews or feedback options.
+If the task was completed more than 30 minutes ago, a specific message is displayed.
+Hides the app download banner if it is present.
+Failed Page
+Displayed When: The task status is failed.
+Behavior:
+Shows the failure reason and any relevant details.
+Hides the app download banner if it is present.
+Conclusion
+This documentation provides a comprehensive overview of the shipment tracking system, including the rules and conditions for displaying different screens, the data tracked by PostHog, and the behaviors expected for each screen flow. This should help new developers understand the system and make necessary changes or improvements.
+
+
+### GraphQL Schema and Resolvers
+
+The provided code defines a GraphQL schema with various fields and their corresponding resolvers. The schema is used to query and mutate data in a structured and type-safe manner. Below is a detailed explanation of each section and its components.
+
+#### Fields and Arguments
+
+1. **order_tips**:
+   - **Type**: `[TipType]`
+   - **Description**: Returns order tips options (e.g., how to prepare a bag).
+   - **Arguments**:
+     - `uuid` (String, optional)
+
+2. **gift_option**:
+   - **Type**: `[GiftOptionType]`
+   - **Description**: Returns gift options.
+   - **Arguments**:
+     - `serviceCountry` (ServiceCountryEnum, optional)
+
+3. **hotels**:
+   - **Type**: `[Types::HotelType]`
+   - **Arguments**:
+     - `filter` (Input::HotelFilter, optional)
+     - `serviceCountry` (ServiceCountryEnum, optional)
+
+4. **global_notice**:
+   - **Type**: `Types::GlobalNoticeType`
+   - **Arguments**:
+     - `service_country` (ServiceCountryEnum, optional)
+     - `city` (String, optional)
+     - `locale` (String, optional)
+
+5. **notifications**:
+   - **Type**: `[Types::NotificationType]`
+   - **Description**: Returns notifications for the user.
+
+6. **app_version**:
+   - **Type**: `AppVersionType`
+   - **Description**: Deprecated, use `appVersion`.
+   - **Arguments**:
+     - `build` (Integer, optional)
+     - `platform` (String, optional)
+
+7. **appVersion**:
+   - **Type**: `AppVersionType`
+   - **Arguments**:
+     - `build` (Integer, optional)
+     - `platform` (String, optional)
+
+8. **countries**:
+   - **Type**: `[CountryType]`
+   - **Description**: Returns a list of countries.
+
+9. **explore_services**:
+   - **Type**: `[ServiceType]`
+   - **Arguments**:
+     - `serviceCountry` (ServiceCountryEnum, optional)
+
+#### Light Flow
+
+10. **light_services**:
+    - **Type**: `[ServiceType]`
+    - **Arguments**:
+      - `locationId` (ID)
+
+11. **light_locations**:
+    - **Type**: `[LightLocationType]`
+    - **Description**: Returns a list of light locations.
+
+12. **light_location**:
+    - **Type**: `LightLocationType`
+    - **Description**: Returns a specific light location.
+    - **Arguments**:
+      - `id` (ID)
+
+13. **light_phone_taken**:
+    - **Type**: `PhoneTakenType`
+    - **Description**: Returns whether a phone is taken and the masked email if the user with the phone and a different email already exists.
+    - **Arguments**:
+      - `phone` (String)
+      - `email` (String)
+      - `validate_phone` (Boolean, optional, default: false)
+
+#### User Surveys
+
+14. **get_persona_survey**:
+    - **Type**: `UserSurveys::PersonaSurveyType`
+    - **Description**: Returns persona survey for the user.
+
+15. **get_same_day_delivery_survey**:
+    - **Type**: `UserSurveys::FastDeliverySurveyType`
+    - **Arguments**:
+      - `addressId` (Integer, optional)
+      - `latitude` (Float, optional)
+      - `longitude` (Float, optional)
+
+16. **get_user_service_survey**:
+    - **Type**: `UserSurveys::UserServiceNotificationType`
+    - **Arguments**:
+      - `address_id` (Integer, optional)
+      - `latitude` (Float, optional)
+      - `longitude` (Float, optional)
+
+#### Station App GraphQL
+
+17. **facility**:
+    - **Type**: `FacilityType`
+    - **Description**: Returns the facility information.
+
+18. **facility_worker_q_r_scan**:
+    - **Type**: `FacilityType`
+    - **Arguments**:
+      - `qrCode` (String)
+
+19. **facility_past_orders**:
+    - **Type**: `FacilityOrderPastOrdersType`
+    - **Arguments**:
+      - `page` (Integer)
+      - `perPage` (Integer)
+      - `filter` (Input::FacilityOrderFilter, optional)
+
+20. **facility_order**:
+    - **Type**: `FacilityOrderType`
+    - **Arguments**:
+      - `id` (ID)
+
+21. **facility_orders**:
+    - **Type**: `FacilityOrderListType`
+    - **Arguments**:
+      - `merge_reprocessing_orders` (Boolean, optional)
+
+22. **facility_order_bag**:
+    - **Type**: `FacilityOrderBagType`
+    - **Arguments**:
+      - `id` (ID)
+
+23. **facility_services**:
+    - **Type**: `[FacilityServiceType]`
+    - **Arguments**:
+      - `bagId` (ID)
+
+24. **facility_item**:
+    - **Type**: `FacilityItemType`
+    - **Arguments**:
+      - `id` (ID)
+
+25. **facility_order_scan_bag**:
+    - **Type**: `FacilityOrderBagType`
+    - **Arguments**:
+      - `qrCode` (String)
+
+26. **facility_order_item**:
+    - **Type**: `FacilityOrderItemType`
+    - **Arguments**:
+      - `id` (ID)
+
+27. **facility_service_mismatch_list**:
+    - **Type**: `ServiceMismatchType`
+    - **Arguments**:
+      - `id` (ID)
+
+28. **station_app_version**:
+    - **Type**: `AppVersionType`
+    - **Arguments**:
+      - `build` (Integer, optional)
+      - `platform` (String, optional)
+
+29. **facility_problems_list**:
+    - **Type**: `[FacilityProblemType]`
+    - **Description**: Returns a list of facility problems.
+
+30. **facility_service_filter**:
+    - **Type**: `[FacilityServiceFilterType]`
+    - **Description**: Returns a list of facility service filters.
+
+31. **orders_with_problems**:
+    - **Type**: `OrdersWithProblemType`
+    - **Description**: Returns orders with problems.
+
+32. **predicted_facility**:
+    - **Type**: `FacilityType`
+    - **Description**: Returns the predicted facility.
+    - **Arguments**:
+      - `express_service` (Boolean, optional)
+
+#### Driver App GraphQL
+
+33. **driver_app_version**:
+    - **Type**: `AppVersionType`
+    - **Arguments**:
+      - `build` (Integer, optional)
+      - `platform` (String, optional)
+
+34. **driver_inbox**:
+    - **Type**: `[DriverApps::DriverInboxType]`
+    - **Description**: Returns driver inbox notifications.
+
+35. **driver_me**:
+    - **Type**: `DriverType`
+    - **Description**: Returns driver info.
+
+36. **task_history_list**:
+    - **Type**: `[TaskType]`
+    - **Description**: Returns drivers completed/failed past tasks.
+    - **Arguments**:
+      - `from_date` (GraphQL::Types::ISO8601Date, required)
+      - `to_date` (GraphQL::Types::ISO8601Date, required)
+
+37. **task_list**:
+    - **Type**: `[TaskType]`
+    - **Description**: Returns drivers today first shift tasks.
+
+38. **task_details**:
+    - **Type**: `TaskType`
+    - **Description**: Returns task detail data for the driver.
+    - **Arguments**:
+      - `task_uuid` (String, required)
+
+39. **start_task**:
+    - **Type**: `TaskType`
+    - **Description**: When driver wants to start the next task.
+    - **Arguments**:
+      - `task_uuid` (String)
+
+40. **arrived_at_task**:
+    - **Type**: `TaskType`
+    - **Description**: When driver arrives at the active task.
+    - **Arguments**:
+      - `task_uuid` (String)
+      - `arrived_at` (Types::TimeType, optional)
+
+41. **start_scanning**:
+    - **Type**: `TaskType`
+    - **Description**: When driver arrives at the active task and triggers Scan and track.
+    - **Arguments**:
+      - `task_uuid` (String)
+
+42. **valid_tracking_code**:
+    - **Type**: `Boolean`
+    - **Description**: On customer pickup when adding scanning new code return false if code was already used for any customer pickup or customer dropoff.
+    - **Arguments**:
+      - `tracking_code` (String)
+
+43. **valid_tracking_code_for_delivery**:
+    - **Type**: `Boolean`
+    - **Description**: On facility pickup when adding new code return false if code was already used for any other order else return true.
+    - **Arguments**:
+      - `tracking_code` (String)
+      - `order_id` (ID)
+
+44. **pickup**:
+    - **Type**: `DriverApps::PickupTaskType`
+    - **Arguments**:
+      - `id` (ID)
+      - `already_called_customer` (Boolean, optional, default: false)
+
+45. **facility_dropoff**:
+    - **Type**: `DriverApps::FacilityDropoffTaskType`
+    - **Arguments**:
+      - `id` (ID)
+
+46. **facility_pickup**:
+    - **Type**: `DriverApps::FacilityPickupTaskType`
+    - **Arguments**:
+      - `id` (ID)
+
+47. **dropoff**:
+    - **Type**: `DriverApps::DropoffTaskType`
+    - **Arguments**:
+      - `id` (ID)
+      - `already_called_customer` (Boolean, optional, default: false)
+
+48. **warehouse_task**:
+    - **Type**: `DriverApps::WarehouseTaskType`
+    - **Arguments**:
+      - `id` (ID)
+
+49. **list_w_i_w_shifts**:
+    - **Type**: `DriverApps::WhenIWork::ListShiftType`
+    - **Description**: Returns the list of open or assigned shifts from When I Work.
+    - **Arguments**:
+      - `only_open_shifts` (Boolean, optional, default: false)
+      - `start_time` (Types::TimeType, optional)
+      - `end_time` (Types::TimeType, optional)
+
+50. **get_w_i_w_shift**:
+    - **Type**: `DriverApps::WhenIWork::GetShiftType`
+    - **Arguments**:
+      - `id` (ID, required)
+
+51. **get_driver_daily_work_confirmation**:
+    - **Type**: `DriverApps::DailyWorkConfirmation::DailyWorkConfirmationType`
+    - **Arguments**:
+      - `id` (ID, required)
+
+#### Subscription
+
+52. **subscription_session_url**:
+    - **Type**: `String`
+    - **Description**: Returns subscription session URL.
+    - **Arguments**:
+      - `short_code` (String, required)
+      - `redirect` (String, optional)
+
+#### Mobile App URLs
+
+53. **mobile_app_url**:
+    - **Type**: `MobileAppUrlType`
+    - **Description**: Returns mobile app URL and QR code. After mobile app is installed, the user is automatically signed in.
+    - **Arguments**:
+      - `params` ([Input::SimpleObjectType], optional)
+
+#### Resolvers
+
+The resolvers are methods that fetch the data for the corresponding fields. They include authentication checks and business logic to retrieve and manipulate data.
+
+- **me**: Returns the current authenticated user.
+- **is_email_taken**: Checks if an email is already taken.
+- **is_apple_email_taken**: Checks if an Apple email is already taken.
+- **is_phone_taken**: Checks if a phone number is already taken.
+- **is_phone_taken_with_email**: Checks if a phone number is taken and returns the associated email.
+- **is_phone_taken_with_email_v2**: Similar to `is_phone_taken_with_email` but masks the email.
+- **send_invoice_mail**: Sends an invoice email for a specific order.
+- **address**: Returns a specific address for the current user.
+- **addresses**: Returns a list of addresses for the current user.
+- **credit_cards**: Returns a list of credit cards for the current user.
+- **order**: Returns a specific order for the current user.
+- **orders**: Returns a list of orders for the current user.
+- **orders_v2**: Returns a list of orders for the current user (version 2).
+- **price_services**: Returns a list of price services.
+- **price_info**: Returns price information.
+- **services**: Returns a list of services.
+- **information**: Returns information.
+- **credit_card_initial_charge**: Returns the initial charge for a credit card.
+- **stripe_publishable_key**: Returns the Stripe publishable key.
+- **merchant_id**: Returns the merchant ID.
+- **service_countries**: Returns a list of service countries.
+- **bundle_groups**: Returns a list of bundle groups.
+- **bundles**: Returns a list of bundles.
+- **purchased_bundles**: Returns a list of purchased bundles.
+- **repeat_orders**: Returns a list of repeat orders.
+- **remind_orders**: Returns a list of remind orders.
+- **repeat_order**: Returns a specific repeat order.
+- **timeslots_v2**: Returns a list of timeslots (version 2).
+- **timeslots_web**: Returns a list of timeslots for the web.
+- **timeslots**: Returns a list of timeslots.
+- **order_tips**: Returns order tips for a specific order.
+- **gift_option**: Returns gift options for a specific service country.
+- **hotels**: Returns a list of hotels based on the filter and service country.
+- **global_notice**: Returns a global notice based on the service country and city.
+- **notifications**: Returns notifications for the current user.
+- **subscription_session_url**: Returns the subscription session URL.
+- **appVersion**: Returns the app version.
+- **app_version**: Returns the app version (deprecated).
+- **countries**: Returns a list of countries.
+- **explore_services**: Returns a list of explore services.
+- **light_services**: Returns a list of light services for a specific location.
+- **light_locations**: Returns a list of light locations.
+- **light_location**: Returns a specific light location.
+- **light_phone_taken**: Checks if a phone number is taken and returns the associated email.
+- **get_cloud_front_info**: Returns CloudFront information.
+- **geo_ip_country**: Returns the default service country.
+- **city**: Returns a specific city.
+- **get_unlimited_plan_options**: Returns a list of unlimited plan options.
+- **get_unlimited_plan_timeslots**: Returns a list of unlimited plan timeslots.
+- **get_unlimited_plan_selected_timeslots**: Returns selected timeslots for an unlimited plan.
+- **get_payment_info**: Returns payment information for an order.
+- **get_payment_policy**: Returns payment policies for an order.
+- **get_payment_intent**: Returns a payment intent for Stripe.
+- **get_magic_link_laundrapp**: Returns a magic link for Laundrapp.
+- **get_persona_survey**: Returns a persona survey for the current user.
+- **get_same_day_delivery_survey**: Returns a same-day delivery survey for the current user.
+- **get_user_service_survey**: Returns a user service survey for the current user.
+- **predicted_facility**: Returns the predicted facility for the current user.
+- **mobile_app_url**: Returns the mobile app URL and QR code.
+- **facility**: Returns the facility information for the current facility worker.
+- **facility_worker_q_r_scan**: Scans a QR code and returns the facility information.
+- **facility_past_orders**: Returns past orders for the facility.
+- **facility_order**: Returns a specific facility order.
+- **facility_orders**: Returns a list of facility orders.
+- **facility_order_bag**: Returns a specific facility order bag.
+- **facility_services**: Returns a list of facility services for a specific bag.
+- **facility_item**: Returns a specific facility item.
+- **facility_order_scan_bag**: Scans a bag and returns the facility order bag information.
+- **facility_order_item**: Returns a specific facility order item.
+- **facility_service_mismatch_list**: Returns a list of service mismatches for a specific bag.
+- **station_app_version**: Returns the station app version.
+- **facility_problems_list**: Returns a list of facility problems.
+- **facility_service_filter**: Returns a list of facility service filters.
+- **orders_with_problems**: Returns orders with problems.
+- **items_in_same_price_service**: Returns items in the same price service for a specific order item.
+- **check_email_typos**: Checks for typos in an email.
+
+### Authentication and Authorization
+
+The resolvers include authentication and authorization checks to ensure that only authorized users can access certain data. The `authenticate`, `authenticate_facility_worker`, and `authenticate_driver` methods are used to perform these checks.
+
+### Error Handling
+
+The resolvers include error handling to manage exceptions and provide meaningful error messages. Custom error classes such as `GraphqlErrors::DriverAppTaskNotFound`, `GraphqlErrors::InvalidPhoneNumberError`, and `GraphqlErrors::StationError` are used to handle specific error scenarios.
+
+### Services
+
+The code makes extensive use of service objects to encapsulate business logic and perform specific tasks. Examples include `Services::DriverApps::TaskHistoryList`, `Services::DriverApps::TasksList`, `Services::DriverApps::StartTask`, and `Services::Stripe::SubscriptionSessionUrl`.
+
+### Conclusion
+
+This detailed technical documentation provides an in-depth look at the GraphQL schema and resolvers defined in the provided code. The schema includes various fields and arguments, and the resolvers implement the logic to fetch and manipulate data based on the schema. Authentication, authorization, and error handling are integral parts of the implementation, ensuring secure and robust data access.
+
+Blocks Feature Documentation
+Overview
+The Blocks feature allows users to manage and view their blocks within the application. This documentation provides step-by-step instructions on how to navigate and utilize the Blocks feature effectively.
+Navigation to Blocks
+1. Accessing the Blocks Navigation
+Open the application.
+Navigate to the main menu and select the "Blocks" option.
+Understanding the Blocks Navigation Screen
+The screen is divided into two main tabs:
+My Blocks: Displays blocks assigned to the user.
+Open Blocks: Shows blocks available for assignment.
+Using the My Blocks Tab
+1. Viewing Assigned Blocks
+Select the "My Blocks" tab.
+You will see a list of blocks assigned to you, including details such as:
+Block status
+Start and end times
+Associated site
+Interacting with a Block
+Tap on a block to view more details.
+You can take actions such as:
+Accept Block: If the block is assigned, you can confirm your acceptance.
+Release Block: If you need to release an assigned block, select the release option.
+3. Handling Notifications
+The header displays the number of unread notifications related to your blocks.
+Click on the notification icon to view updates.
+Using the Open Blocks Tab
+Viewing Available Blocks
+Select the "Open Blocks" tab.
+A list of blocks available for assignment will be displayed.
+2. Filtering Blocks
+Use the filter options to narrow down the blocks based on criteria such as:
+Date
+Site
+Apply filters to view specific blocks that meet your requirements.
+Assigning a Block
+Tap on an available block to view its details.
+If you wish to take the block, select the "Take Block" option.
+Confirm your action in the popup that appears.
+Additional Features
+Hamburger Menu
+Access additional options by clicking the hamburger menu icon in the header.
+This menu provides shortcuts to other features and settings.
+2. Navigation Buttons
+Use the navigation buttons to move between different screens within the blocks feature.
+The "Go To Task" button allows quick access to related tasks.
+Conclusion
+The Blocks feature is designed to streamline the management of blocks within the application. By following the steps outlined in this documentation, users can efficiently navigate and utilize the various functionalities available in the Blocks feature. For further assistance, refer to the help section or contact support.
+
+Task Navigator Feature Documentation
+Overview
+The Task Navigator feature allows users to manage and navigate through their tasks efficiently. This documentation provides step-by-step instructions on how to utilize the Task Navigator feature within the application.
+Accessing the Task Navigator
+Open the Application
+Launch the application on your device.
+2. Navigate to the Task Navigator
+From the main menu, select the "Task Navigator" option to access the Task Navigator feature.
+Using the Task Navigator
+1. Viewing Tasks
+1. Access the Task List
+Upon entering the Task Navigator, you will see a list of tasks assigned to you.
+2. Understanding Task Status
+Each task will display its current status, which may include:
+Assigned
+In Progress
+Completed
+Failed
+2. Interacting with Tasks
+Select a Task
+Tap on any task to view its details.
+2. Task Details Screen
+The Task Details screen will show:
+Task description
+Start and end times
+Associated location
+Any relevant notes
+Starting a Task
+If the task is in the "Assigned" state, you can start it by clicking the "Start Task" button.
+Confirm your action in the popup that appears.
+4. Tracking Progress
+While the task is in progress, you can track its status and update any necessary information.
+5. Completing a Task
+Once the task is finished, click the "Complete Task" button to mark it as completed.
+Confirm your action in the popup that appears.
+3. Handling Errors
+1. Error Notifications
+If there is an error with a task (e.g., unable to start or complete), an alert will be displayed with the error message.
+Review the error message and take appropriate action.
+4. Navigation Options
+1. Navigating Back
+Use the back button to return to the previous screen or the main menu.
+Accessing Additional Features
+The Task Navigator may include additional features such as:
+Viewing completed tasks
+Filtering tasks by status
+Accessing task history
+Conclusion
+The Task Navigator feature is designed to streamline task management within the application. By following these step-by-step instructions, users can efficiently navigate and utilize the various functionalities available in the Task Navigator feature. For further assistance, refer to the help section or contact support.
+
+Sure, here's a step-by-step guide for the "Task Navigator" feature. This guide assumes that the Task Navigator is a feature in your application that helps drivers navigate through their tasks.
+
+Task Navigator Feature Documentation
+Overview
+The Task Navigator feature helps drivers manage and navigate through their tasks efficiently. It provides a user-friendly interface to view, start, and complete tasks.
+
+Prerequisites
+Ensure you have the latest version of the application installed.
+Ensure you have an active internet connection.
+Ensure you are logged into the application with the appropriate permissions.
+Step-by-Step Instructions
+Accessing the Task Navigator
+
+Open the application.
+Navigate to the main dashboard.
+Tap on the "Task Navigator" icon or menu item.
+Viewing Tasks
+
+Once in the Task Navigator, you will see a list of tasks assigned to you.
+Each task will display basic information such as the task name, location, and status.
+Starting a Task
+
+Select a task from the list to view its details.
+Review the task details to understand the requirements.
+Tap the "Start Task" button to begin the task.
+The application will navigate you to the task location using the built-in map feature.
+Arriving at the Location
+
+Once you reach the task location, tap the "I've arrived at the location" button.
+This will notify the system that you have arrived and update the task status.
+Completing the Task
+
+Follow the instructions provided in the task details to complete the task.
+Once the task is completed, tap the "Complete Task" button.
+You may be required to take a photo or collect a signature as proof of completion.
+Navigating to the Next Task
+
+After completing a task, the Task Navigator will automatically suggest the next task.
+You can also manually select the next task from the task list.
+Repeat the steps for starting and completing tasks.
+Handling Multiple Pickups or Drop-offs
+
+If you have multiple pickups or drop-offs for the same customer, the Task Navigator will group these tasks.
+Follow the on-screen instructions to handle multiple tasks efficiently.
+Viewing Task History
+
+You can view the history of completed tasks by navigating to the "Task History" section.
+This section provides a detailed log of all tasks you have completed.
+Using Developer Options (For Developers)
+
+Task Not Starting: Ensure you have a stable internet connection and try restarting the application.
+Location Issues: Ensure location services are enabled on your device and the application has the necessary permissions.
+Task Completion Issues: Ensure all required fields are filled out and any necessary proof (photo, signature) is collected.
+
+
+
+## Documentation for Logistics Planning and Route Assignment
+
+### Overview
+
+This module handles various logistics planning and route assignment tasks. It includes methods for distributing tasks to facilities, planning routes, simulating route plans, and generating reports. The module also handles exceptions and provides feedback to the user through flash messages.
+
+### Methods
+
+#### `optimize_facility_tasks`
+
+- **Description**: Distributes tasks to facilities based on capacity and distance.
+- **Parameters**:
+  - `city`: The city where the tasks are to be planned.
+  - `shift`: The shift for which the tasks are to be planned.
+  - `facilities`: The facilities involved in the planning.
+  - `current_date`: The current date for the planning.
+- **Exceptions**:
+  - `Logistics::Exceptions::PlanningFailedError`: Raised if no tasks are found or if planning fails.
+
+#### `pre_planning_facility`
+
+- **Description**: Pre-plans routes for a specific facility.
+- **Parameters**:
+  - `params[:id]`: The ID of the facility.
+  - `params[:shift]`: The shift for which the routes are to be planned.
+- **Exceptions**:
+  - `Logistics::Exceptions::NoAlreadyAssignedTasksOnDriver`
+  - `Logistics::Exceptions::NoNewTasksToPlan`
+  - `Logistics::Exceptions::PlanningFailedError`
+- **Renders**: `pre_planning_facility` view with no layout.
+
+#### `assign_routes`
+
+- **Description**: Assigns routes to drivers.
+- **Parameters**:
+  - `params[:route_plan_id]`: The ID of the route plan.
+  - `params[:after_assign_path]`: The path to redirect to after assigning routes.
+- **Exceptions**:
+  - `Logistics::Exceptions::AssigningFailedError`
+- **Redirects**: To the specified path or back to the pre-planning options path.
+
+#### `planning_simulator`
+
+- **Description**: Simulates route planning and assignment.
+- **Parameters**:
+  - `params[:route_plan_simulator_id]`: The ID of the route plan simulator.
+- **Exceptions**:
+  - `Logistics::Exceptions::NoAlreadyAssignedTasksOnDriver`
+  - `Logistics::Exceptions::NoNewTasksToPlan`
+  - `Logistics::Exceptions::PlanningFailedError`
+
+#### `restart_planning_simulator`
+
+- **Description**: Deletes old route plans for a simulator and triggers new ones.
+- **Parameters**:
+  - `params[:id]`: The ID of the route plan simulator.
+- **Redirects**: Back to the planning simulator options path with a success notice.
+
+#### `rerun_original_planning_from_simulator`
+
+- **Description**: Re-runs the original planning request to gather a new job ID.
+- **Parameters**:
+  - `params[:id]`: The ID of the route plan simulator.
+- **Redirects**: Back to the planning simulator options path with a success notice.
+
+#### `reports`
+
+- **Description**: Generates reports based on various filters.
+- **Parameters**:
+  - `params[:team_filter_id]`: The ID of the team filter.
+  - `params[:shift]`: The shift for which the report is to be generated.
+  - `params[:date]`: The date for which the report is to be generated.
+- **Calculates**: Various average multipliers and historical route data.
+
+### Private Methods
+
+#### `facility`
+
+- **Description**: Retrieves the facility based on the team filter ID.
+
+#### `city`
+
+- **Description**: Retrieves the city based on the city filter ID.
+
+#### `timezone`
+
+- **Description**: Retrieves the timezone of the facility or city.
+
+#### `tz_time`
+
+- **Description**: Retrieves the current time in the specified timezone.
+
+#### `get_current_time`
+
+- **Description**: Retrieves the current time or the time for the next day based on the pre-plan day parameter.
+
+#### `get_historical_route_data`
+
+- **Description**: Retrieves historical route data for a specific shift and date.
+
+#### `get_history_number_of_tasks`
+
+- **Description**: Retrieves the number of tasks for the past for the same day of the week and shift.
+
+#### `get_history_number_of_pickup_tasks`
+
+- **Description**: Retrieves the number of pickup tasks for the past for the same day of the week and shift.
+
+#### `get_drivers`
+
+- **Description**: Retrieves the drivers from the pre-planning service.
+
+#### `get_task_config`
+
+- **Description**: Retrieves the global task configuration.
+
+#### `get_vehicle_config`
+
+- **Description**: Retrieves the vehicle configuration based on various parameters.
+
+#### `density_task_inclusion`
+
+- **Description**: Calculates the number of tasks to be included based on shift length and density.
+
+#### `cost_per_over_task_inclusion`
+
+- **Description**: Calculates the cost per over-task inclusion based on shift length and density.
+
+#### `get_configuration`
+
+- **Description**: Retrieves the configuration for the pre-planning service.
+
+#### `route_solver`
+
+- **Description**: Retrieves the route solver type.
+
+#### `route_solver_key`
+
+- **Description**: Retrieves the route solver key.
+
+#### `shift_times`
+
+- **Description**: Retrieves the start and end times for a specific shift.
+
+#### `reset_flash_alert`
+
+- **Description**: Resets the flash alert message.
+
+#### `error_message`
+
+- **Description**: Extracts and returns the error message from an exception.
+
+
+The GenerateDriverFeesCsvJob is a background job that generates a CSV file containing driver fee information. Here's a recap of what it does:
+
+It takes an export object, a collection of drivers, and a driver_fee_export object as parameters.
+The job updates the export status to "in_progress" when it starts.
+It creates a CSV file with a unique name based on the export ID.
+The job calculates a date range based on the driver_fee_export's "from" and "to" dates.
+It writes headers to the CSV file, which vary based on the service country.
+For each driver, it calculates the fee amount within the specified date range.
+If the fee amount is not zero, it writes a row to the CSV with the driver's information.
+The CSV includes details such as name, email, payment reference, account details, and more.
+After processing all drivers, it updates the export status to "finished".
+If an error occurs during the process, it updates the export status to "failed" and logs the error message.
+This job is likely called when an admin or system process requests a report of driver fees. It would typically be triggered through a user interface action or a scheduled task, depending on the application's requirements for generating these reports.
+
+
+****************************************************************
+
+The post_service_review.rb file contains the Commands::Orders::PostServiceReview class, which handles the process of posting a service review for an order. Here's a recap of what it does:
+
+It defines constants for review steps, options that redirect to a resolution center, and a bad score threshold.
+
+The class provides methods for both good and bad review options, filtered by dropoff methods.
+
+The main logic is in the post_review method, which handles different steps of the review process:
+
+Postpone: Schedules a push notification job if not already scheduled.
+Skip: Marks the order to skip the service review.
+Select Score: Determines the next step based on the score and existing options.
+Select Options: Updates the review options and may redirect to the resolution center.
+Write Review: Completes the review process.
+If no review exists for the order, it creates a new one with the provided score.
+
+For bad reviews (score < 4), it schedules a HandleServiceReviewJob to notify admins and update risk assessment.
+
+The class filters review options based on the score and dropoff method.
+
+This component manages the entire flow of collecting and processing service reviews, handling different scenarios and steps in the review process.
+
+*********************************************************
+SendFirstOrderTipsJob
+
+Yes, I can recheck when the send_first_order_tips mail is sent to the customer. After examining the provided codebase context, specifically the send_first_order_tips_job.rb and create.rb files, I can confirm the following:
+
+In the create.rb file, the send_first_order_tips mail is triggered as follows:
+
+def send_first_order_tips(order)
+  SendFirstOrderTipsJob.set(wait: 1.hour).perform_later(order) if @user.orders.count == 1
+end
+
+This method is called within the execute method of the Commands::Orders::Create class. It schedules the SendFirstOrderTipsJob to be performed 1 hour later, but only if this is the user's first order.
+
+The SendFirstOrderTipsJob (from send_first_order_tips_job.rb) then handles the actual sending of the email:
+
+class SendFirstOrderTipsJob < ApplicationJob
+  queue_as :default
+
+  def perform(order)
+    if order.order_status.name != "cancelled"
+      UserMailer.send_first_order_tips(order).deliver_later
+    end
+  end
+end
+
+
+This job checks if the order status is not "cancelled", and if so, it calls UserMailer.send_first_order_tips to deliver the email.
+
+In summary, the send_first_order_tips mail is scheduled to be sent 1 hour after the creation of a user's first order, provided the order is not cancelled.
+
+*********************************
+
+Yes, I can check when the new QR code message is sent to Slack. After examining the provided codebase context, specifically the send_new_qr_code_message_job.rb and complete_facility_dropoff.rb files, I can confirm the following:
+
+In the complete_facility_dropoff.rb file, the SendNewQrCodeMessageJob is triggered within the create_and_deliver_new_pickup_item method:
+
+SendNewQrCodeMessageJob.perform_later(task.id, order.id, scanned_code[:code])
+
+This job is called when a new pickup item is created during the facility dropoff process, specifically when a new QR code is scanned that wasn't previously associated with the order.
+
+The SendNewQrCodeMessageJob (from send_new_qr_code_message_job.rb) then handles sending the message to Slack:
+
+class SendNewQrCodeMessageJob < ApplicationJob
+  queue_as :default
+
+  def perform(facility_dropoff_task_id, order_id, qr_code)
+    facility_dropoff_task = Task.find(facility_dropoff_task_id)
+    order = Order.find(order_id)
+
+    Commands::Slack::SendNewQrCodeMessage
+      .run(facility_dropoff_task: facility_dropoff_task, order: order, qr_code: qr_code)
+  end
+end
+
+This job retrieves the facility dropoff task and order information, then calls the Commands::Slack::SendNewQrCodeMessage command to send the message to Slack.
+
+In summary, the new QR code message is sent to Slack when a driver scans a new, previously unassociated QR code during the facility dropoff process for an order.
+
+
+LH Planning Documentation:
+
+Time Handling:
+All planning is done in local time, using the facility's or city's timezone.
+The system uses Time.current.in_time_zone(timezone) to ensure all operations are in the correct local time.
+Shift times are defined in local time:
+NGT: 17:00 to 00:00 next day
+PM: 12:00 to 18:00
+AM: 00:00 to 13:00
+Pre-planning Process:
+Handles both "tomorrow" and current day planning.
+Filters tasks based on shift-specific time windows:
+PM: Complete before hour between 1 and 17
+AM: Complete before hour <= 12
+NGT: Complete before hour > 17 or = 0
+CFLP Planning:
+Uses local date for task selection: complete_after_date: @current_date
+Considers driver daily work confirmations in local time: (first_task_complete_after AT TIME ZONE 'utc' AT TIME ZONE timezone)::DATE
+Route Planning Types:
+Pre-start planning: Done before shift starts
+On-demand planning: Done during the shift
+Last planning: Final planning before shift execution
+Driver Shift Considerations:
+Checks if shift has already started using local time: shift_times(params[:shift], tz_time)[:start] <= (tz_time + DriverDailyWorkConfirmation::REASSIGNMENT_MINUTES)
+Uses driver's start time from daily work confirmation
+Congestion Charge (CC) Handling:
+Determines need for CC drivers based on tasks in congestion zones
+Allocates CC tasks to specific drivers or splits among available drivers
+Vehicle Capacity and Constraints:
+Considers custom vehicle capacities (bags, hangers) if defined
+Uses default limits if custom capacity not set
+Applies shift-specific distance limits based on density (low, mid, high)
+Task Service Times:
+Uses average service times specific to the facility and shift
+Historical Data Usage:
+Retrieves historical task counts for the same day of week and shift
+Uses this data to predict task volumes and adjust planning accordingly
+Route Optimization Parameters:
+Applies travel duration multipliers to account for traffic conditions
+Considers shift density (low, mid, high) for cost calculations
+Implements task inclusion limits based on shift length and density
+Planning Failure Handling:
+Provides specific error messages for various failure scenarios (e.g., no tasks to plan, no work confirmations)
+Results Storage and Caching:
+Stores detailed route plan results including skipped tasks, delays, distances
+Caches certain query results (e.g., historical data) to improve performance
+Simulation Capabilities:
+Allows for planning simulation to test different scenarios without affecting live data
+This detailed documentation covers the various cases and considerations in the planning process, including time handling, shift-specific logic, and optimization parameters.
+

@@ -1,0 +1,95 @@
+The GenerateDriverFeesCsvJob is a background job that generates a CSV file containing driver fee information. Here's a recap of what it does:
+
+It takes an export object, a collection of drivers, and a driver_fee_export object as parameters.
+The job updates the export status to "in_progress" when it starts.
+It creates a CSV file with a unique name based on the export ID.
+The job calculates a date range based on the driver_fee_export's "from" and "to" dates.
+It writes headers to the CSV file, which vary based on the service country.
+For each driver, it calculates the fee amount within the specified date range.
+If the fee amount is not zero, it writes a row to the CSV with the driver's information.
+The CSV includes details such as name, email, payment reference, account details, and more.
+After processing all drivers, it updates the export status to "finished".
+If an error occurs during the process, it updates the export status to "failed" and logs the error message.
+This job is likely called when an admin or system process requests a report of driver fees. It would typically be triggered through a user interface action or a scheduled task, depending on the application's requirements for generating these reports.
+
+
+****************************************************************
+
+The post_service_review.rb file contains the Commands::Orders::PostServiceReview class, which handles the process of posting a service review for an order. Here's a recap of what it does:
+
+It defines constants for review steps, options that redirect to a resolution center, and a bad score threshold.
+
+The class provides methods for both good and bad review options, filtered by dropoff methods.
+
+The main logic is in the post_review method, which handles different steps of the review process:
+
+Postpone: Schedules a push notification job if not already scheduled.
+Skip: Marks the order to skip the service review.
+Select Score: Determines the next step based on the score and existing options.
+Select Options: Updates the review options and may redirect to the resolution center.
+Write Review: Completes the review process.
+If no review exists for the order, it creates a new one with the provided score.
+
+For bad reviews (score < 4), it schedules a HandleServiceReviewJob to notify admins and update risk assessment.
+
+The class filters review options based on the score and dropoff method.
+
+This component manages the entire flow of collecting and processing service reviews, handling different scenarios and steps in the review process.
+
+*********************************************************
+SendFirstOrderTipsJob
+
+Yes, I can recheck when the send_first_order_tips mail is sent to the customer. After examining the provided codebase context, specifically the send_first_order_tips_job.rb and create.rb files, I can confirm the following:
+
+In the create.rb file, the send_first_order_tips mail is triggered as follows:
+
+def send_first_order_tips(order)
+  SendFirstOrderTipsJob.set(wait: 1.hour).perform_later(order) if @user.orders.count == 1
+end
+
+This method is called within the execute method of the Commands::Orders::Create class. It schedules the SendFirstOrderTipsJob to be performed 1 hour later, but only if this is the user's first order.
+
+The SendFirstOrderTipsJob (from send_first_order_tips_job.rb) then handles the actual sending of the email:
+
+class SendFirstOrderTipsJob < ApplicationJob
+  queue_as :default
+
+  def perform(order)
+    if order.order_status.name != "cancelled"
+      UserMailer.send_first_order_tips(order).deliver_later
+    end
+  end
+end
+
+
+This job checks if the order status is not "cancelled", and if so, it calls UserMailer.send_first_order_tips to deliver the email.
+
+In summary, the send_first_order_tips mail is scheduled to be sent 1 hour after the creation of a user's first order, provided the order is not cancelled.
+
+*********************************
+
+Yes, I can check when the new QR code message is sent to Slack. After examining the provided codebase context, specifically the send_new_qr_code_message_job.rb and complete_facility_dropoff.rb files, I can confirm the following:
+
+In the complete_facility_dropoff.rb file, the SendNewQrCodeMessageJob is triggered within the create_and_deliver_new_pickup_item method:
+
+SendNewQrCodeMessageJob.perform_later(task.id, order.id, scanned_code[:code])
+
+This job is called when a new pickup item is created during the facility dropoff process, specifically when a new QR code is scanned that wasn't previously associated with the order.
+
+The SendNewQrCodeMessageJob (from send_new_qr_code_message_job.rb) then handles sending the message to Slack:
+
+class SendNewQrCodeMessageJob < ApplicationJob
+  queue_as :default
+
+  def perform(facility_dropoff_task_id, order_id, qr_code)
+    facility_dropoff_task = Task.find(facility_dropoff_task_id)
+    order = Order.find(order_id)
+
+    Commands::Slack::SendNewQrCodeMessage
+      .run(facility_dropoff_task: facility_dropoff_task, order: order, qr_code: qr_code)
+  end
+end
+
+This job retrieves the facility dropoff task and order information, then calls the Commands::Slack::SendNewQrCodeMessage command to send the message to Slack.
+
+In summary, the new QR code message is sent to Slack when a driver scans a new, previously unassociated QR code during the facility dropoff process for an order.

@@ -1,0 +1,2 @@
+class UserPrompt < ApplicationRecord
+end
