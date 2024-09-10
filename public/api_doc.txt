@@ -1,95 +1,862 @@
-The GenerateDriverFeesCsvJob is a background job that generates a CSV file containing driver fee information. Here's a recap of what it does:
+Press release
+Laundryheap Unveils Enhanced In-House Driver App to Optimize Delivery Operations
+London, 19th Dec – Laundryheap, a leading provider of on-demand laundry services, is excited to announce a major update to its driver app, transitioning from the existing Onfleet platform to a robust in-house solution built from the ground up. This strategic move aims to overcome limitations observed in the previous system, providing an enhanced user experience for drivers while maintaining and expanding essential functionalities.
+Key Enhancements:
+Easier Navigation: The revamped user flow within the new app allows drivers to seamlessly navigate through open and booked blocks, view assigned tasks for the day, and activate, complete, or fail tasks—all within a unified platform. The improved user interface ensures a more intuitive experience, facilitating efficient tracking of driver touchpoints for the team.
+Relevant Information: The task list in the new app communicates crucial details such as order number, customer address, service type (pickup or delivery), task timeslot, and estimated time of arrival (ETA) for the next task. Push and in-app notifications keep drivers informed of any changes to the active route or task, allowing ample time for adjustments.
+Navigation Excellence: Introducing an in-app navigation system, the new app enables drivers to view routes without leaving the application. Leveraging the Google Maps API for real-time traffic data, road closures, and one-way streets, the updated navigation system offers increased accuracy. Visual indicators in the task list highlight concurrent tasks at the same location, prioritizing deliveries to optimize efficiency and reduce errors.
+Quality of Life Improvements: The task navigator has been meticulously designed with ease of use in mind, aiming to enhance the day-to-day operations of drivers. Sequencing tasks to prioritize deliveries minimizes the need for drivers to shuttle back and forth to their vehicles, streamlining the overall process. Visual communication regarding the number of bags and hangers for each delivery further contributes to a more seamless workflow.
+Mr. Deyan Dimitrov, CEO and Founder of Laundryheap, expressed his enthusiasm for the app update, stating, "Our commitment to providing top-notch services extends beyond our customers to our valued drivers. This in-house app is a testament to our dedication to their success, offering a user-friendly and feature-rich platform that simplifies their daily tasks and enhances overall efficiency."
+Laundryheap remains at the forefront of innovation in the on-demand laundry industry, continually striving to elevate both customer and driver experiences. The updated in-house driver app is set to roll out in early 2024 and is poised to make a significant impact on the efficiency and effectiveness of Laundryheap's delivery operations.
 
-It takes an export object, a collection of drivers, and a driver_fee_export object as parameters.
-The job updates the export status to "in_progress" when it starts.
-It creates a CSV file with a unique name based on the export ID.
-The job calculates a date range based on the driver_fee_export's "from" and "to" dates.
-It writes headers to the CSV file, which vary based on the service country.
-For each driver, it calculates the fee amount within the specified date range.
-If the fee amount is not zero, it writes a row to the CSV with the driver's information.
-The CSV includes details such as name, email, payment reference, account details, and more.
-After processing all drivers, it updates the export status to "finished".
-If an error occurs during the process, it updates the export status to "failed" and logs the error message.
-This job is likely called when an admin or system process requests a report of driver fees. It would typically be triggered through a user interface action or a scheduled task, depending on the application's requirements for generating these reports.
+Key challenges
 
-
-****************************************************************
-
-The post_service_review.rb file contains the Commands::Orders::PostServiceReview class, which handles the process of posting a service review for an order. Here's a recap of what it does:
-
-It defines constants for review steps, options that redirect to a resolution center, and a bad score threshold.
-
-The class provides methods for both good and bad review options, filtered by dropoff methods.
-
-The main logic is in the post_review method, which handles different steps of the review process:
-
-Postpone: Schedules a push notification job if not already scheduled.
-Skip: Marks the order to skip the service review.
-Select Score: Determines the next step based on the score and existing options.
-Select Options: Updates the review options and may redirect to the resolution center.
-Write Review: Completes the review process.
-If no review exists for the order, it creates a new one with the provided score.
-
-For bad reviews (score < 4), it schedules a HandleServiceReviewJob to notify admins and update risk assessment.
-
-The class filters review options based on the score and dropoff method.
-
-This component manages the entire flow of collecting and processing service reviews, handling different scenarios and steps in the review process.
-
-*********************************************************
-SendFirstOrderTipsJob
-
-Yes, I can recheck when the send_first_order_tips mail is sent to the customer. After examining the provided codebase context, specifically the send_first_order_tips_job.rb and create.rb files, I can confirm the following:
-
-In the create.rb file, the send_first_order_tips mail is triggered as follows:
-
-def send_first_order_tips(order)
-  SendFirstOrderTipsJob.set(wait: 1.hour).perform_later(order) if @user.orders.count == 1
-end
-
-This method is called within the execute method of the Commands::Orders::Create class. It schedules the SendFirstOrderTipsJob to be performed 1 hour later, but only if this is the user's first order.
-
-The SendFirstOrderTipsJob (from send_first_order_tips_job.rb) then handles the actual sending of the email:
-
-class SendFirstOrderTipsJob < ApplicationJob
-  queue_as :default
-
-  def perform(order)
-    if order.order_status.name != "cancelled"
-      UserMailer.send_first_order_tips(order).deliver_later
-    end
-  end
-end
+Replace Onfleet’s app with our own while improving driver experience and efficiency (Task list + What step to start the task)
+From Piyash Pal: What do you mean by “Task list”? - A Task list is a general list of all the tasks that are assigned to a driver within a single route. It consists of both pickups and dropoffs
+↳ From Piyash Pal: How many tasks are we showing in this task list? Do we intend to hide all future tasks while still providing some info about concurrent tasks? Peter Cernuta Kushagra Rawat - We want to show the entire task list and decide on what info each task card will show
+↳ Understood, let’s progress on this a bit more. I remember Caroline saying on the call too that she wouldn’t want to show the entire task list. What are their reasons for saying? 
+From Piyash Pal: “Efficiency” of? What is the goal of this? - Efficiency of the route planning process, where in we plan a route for a driver but they don’t end up rejecting the route at once
+↳ From Piyash Pal: What do you mean by “rejecting route at once” is there a functionality like such in onfleet? - No such functionality but an operational issue. Driver receives the route and communicates to the admin team that they don’t want to do this route or they suggest improvements to the route (usually changing sequence of tasks)
+↳ Based on the driver interviews we did yesterday, I think this is because they ask for: 1. Flexibility in choosing the sequence of tasks based on the traffic | 2. Ability to effectively do more tasks | 3. Anything else?
+Driver should no longer see the full route but only the next task (Need to design this) - Not feasible , we will show complete task list 
+From Piyash Pal: “full route” usually comprises all the customer/facility pickup/dropoffs, right? How would this “full route” update if there was a task which was withdrawn or a schedule update? Can you please tell me? - If there is task that was withdrawn/cancelled or rescheduled, it would be removed/resequenced in the task list and shown to the driver as such. You cannot withdraw or reschedule and active task
+↳ But if we are not showing the task list then this does not even make sense.- Guess we know now 
+Last-minute changes to tasks (reschedules, updated driver instructions, updated methods) should be reflected in the app immediately, perhaps along with a push notification
+From Piyash Pal: Let’s say the driver has 14 tasks, are we going to only reflect changes for immediate tasks with an in-app notification WHEN it is driver instructions/collect or deliver method - What do you mean by immediate tasks?
+↳ By immediate I mean Active task or (Active task + 1; Next task): Drivers usually look at the driver instructions on onfleet so I don’t think notifications for non-active tasks is so important in v1 but something for v2
+From Piyash Pal: Because I don’t think it’s relevant for the driver when it is a task which is 2nd in line from the active task THAT has been rescheduled - I do think it is relevant for the driver to know that a non active task has been rescheduled and onfleet sends some notification regarding the same. We should also retain this functionality.
+↳ We need to be mindful cause I still need why the operations team don’t want to show the whole list of tasks. This will define if we need to notify the drivers for any reschedule for later tasks. I have a few more questions on this also.
+From Piyash Pal: What happens when an active task is rescheduled/cancelled? - Active task cannot be rescheduled without failing the task from either the driver or admin end. In this case, the task is failed + order status → pending and the date of the task is rescheduled in the backend
+↳ So it won’t show up any more on the screen or in the task list and basically, the driver can get a notification depending on what went wrong - Driver will usually contact logs team in such cases as these reasons are few and far (driver arrived early and customer not at home, vehicle breakdown to name a few)
+From Piyash Pal: The same questions are applied to the following pointer (concurrent pickup/dropoffs
+Solve the issue of concurrent pickups (=pickups of multiple orders at the same location, ie a hotel, to avoid mixups of bags) - How should we group these orders and display them to the driver
+From Piyash Pal: Ideally these can be pickups and dropoffs only or both, correct? - correct
+From Piyash Pal: Let's figure out what the best method for the driver is to do when it comes to both pickup and dropoff. Like we notify the driver that it is a mix of both and ask them to only carry the dropoff items first. But in case the customer is not at the “hotel/society” we should encourage the customers to use the “...outside the door” method. Thoughts? - Agreed, In dubai we’ve tried “collect outside the door” option as default but in hotels they don’t allow our PDs past the reception and customer anyway has to come to the reception
+Driver does not want to do longer routes because they plan their day around the route that they are given and hence visibility of entire route is important to them
+From Piyash Pal: Didn’t you say “full route” should not be shown? This is more of a logistical question. Should admins/lmfs be providing an optimal route - True, this is more of an operational issue but let’s see if we can solve for at least the visibility part in some way
+↳ What do you mean by “visibility”? Can you please elaborate? - By visibility i meant the kind of info and functionality we want to show to the driver and the discoverability of said functions
+We want to ensure that drivers do not start a task out of order in the task sequence for the route assigned to them - 
+Logs team want to know the driver location even before the shift begins so that the team can get a visibility into whether the driver will be able to make it to Facility on time for shift
 
 
-This job checks if the order status is not "cancelled", and if so, it calls UserMailer.send_first_order_tips to deliver the email.
+FAQ
+What is the default landing page when a user opens the app
+Default Landing Page
+Driver opens app before starting shift 
+Before task list is sent (> 60 mins to block start time)
+Block page: My blocks + open blocks
+After task list is sent (< 60 mins to block start time)
+Block page with task list CTA
+Driver opens app during a shift (activated a WP/FP task): Always land on task list- to ensure driver remains inside task list flow
+What happens to the completed tasks and how do we show them on the task list?
+When can a driver start a task?
+Use the same logic as we currently follow on the onfleet driver app
+Why do we need task history? Where do we show the task history? What should it look like? 
+Payment reasons - I did these many tasks and need to be paid as such 
+Reconciliation - If some issue happened with an order, driver will go back to task history and check for the task in the history
+We will show task history as a separate tab in the hamburger menu
+Search Bar - How does it work and what all can you search there? Search by customer name, address and order number? What else?
+Do we need an option for a driver to go off duty in the middle of the shift? What could be the reason for the same? - We don’t really need them going offline but we do need a way to track them before their shift begins so we can track their exact location.
+What inapp notifications should we provide for driver - 
+Running late 
+Task added 
+Task removed 
+Offline/Online Status (due to network issues)
+Should we provide the driver with an option to visualize complete route (suggested by Peter and I’m sure the logs team will also ask for it since it was already there in onfleet) - Yes we should 
+Drivers sometimes only look at the task slot and then idle till the task time (for example, driver will look at task and see first task is at 7pm without realising it’s a drop at door/reception)
+Some drivers don’t have blocks and block scheduler (for example - Gulf Countries), what do we show here?
+Take them directly to the task list when they open the app
+What happens when the admin team adds a facility pickup in the middle of a shift
+It will be marked as a facility pickup and be added in the middle of the route
+What happens if the task is Active and the driver closes the app - 
+Mobile App - Always open block scheduler 
+Push notifications - When the driver has an upcoming block in the next couple of hours, we send a push notification “You have an upcoming block” 
+2 hrs from block start time + Block is accepted/taken: We will send a notification
+Click on notification → Open My Blocks page
+Block Status will say “Upcoming” 
+When should the driver be able to call and text the customer 
+When a driver has a current task, they should see an option to call and text the customer 
+For multiple tasks in the same location, how will we display the markers in the bird's eye view?  
+If pickup and drop in a sequence 
+PICK, DROP
+#3, #4
+Check for French Translations here (Pick up: Ramasser | Drop off: Déposer)
+Are we showing Facility/Warehouse tasks on the map view? - No, we only need to show customer tasks
+Key success metrics
+What should be the key success metrics here? 
 
-In summary, the send_first_order_tips mail is scheduled to be sent 1 hour after the creation of a user's first order, provided the order is not cancelled.
+User stories
 
-*********************************
+As a driver, I want to be able to switch between scheduler and navigator
+As a driver, I want to see my next task
+What when there is no next task (no route assigned)
+What if a new task is assigned
+As a driver, I want to be able to start a task
+When can the driver actually start the first task (perhaps except if they call the customer first - to avoid unnecessary wait time)
+As a driver, I want to be notified when the next task changes (new task assigned or existing updated) or if the active task changes (method or instructions)
+As a driver after starting the task, I want to see Google Maps navigation and a button to mark that I arrived at the location
+Once they do so, they’re taken to S&T
+As a driver, once I complete or fail a task (or if an admin does it), I want to be taken back to the navigator to see the next task
+As a driver, I need to be informed that there are several orders to pick up at the same location
+As a driver, I need to be informed that my next task is inside a congestion zone so I can prepare myself accordingly
+As a driver, I want to end my shift because of xyz reason.
+To check how to handle such scenarios
+From Piyash Pal: What are the reasons? - personal reasons, emergency, vehicle breakdown
+We will not allow them to end their shift during an active task
 
-Yes, I can check when the new QR code message is sent to Slack. After examining the provided codebase context, specifically the send_new_qr_code_message_job.rb and complete_facility_dropoff.rb files, I can confirm the following:
+Requirements [V1]
 
-In the complete_facility_dropoff.rb file, the SendNewQrCodeMessageJob is triggered within the create_and_deliver_new_pickup_item method:
+Feature 
+User Story
+Acceptance Criteria
+Jira Link
+Notes
+Status
 
-SendNewQrCodeMessageJob.perform_later(task.id, order.id, scanned_code[:code])
+Block Scheduler Page 
 
-This job is called when a new pickup item is created during the facility dropoff process, specifically when a new QR code is scanned that wasn't previously associated with the order.
 
-The SendNewQrCodeMessageJob (from send_new_qr_code_message_job.rb) then handles sending the message to Slack:
 
-class SendNewQrCodeMessageJob < ApplicationJob
-  queue_as :default
 
-  def perform(facility_dropoff_task_id, order_id, qr_code)
-    facility_dropoff_task = Task.find(facility_dropoff_task_id)
-    order = Order.find(order_id)
 
-    Commands::Slack::SendNewQrCodeMessage
-      .run(facility_dropoff_task: facility_dropoff_task, order: order, qr_code: qr_code)
-  end
-end
 
-This job retrieves the facility dropoff task and order information, then calls the Commands::Slack::SendNewQrCodeMessage command to send the message to Slack.
+Block Details Page
+As a driver, I want to be able to switch between scheduler and navigator
 
-In summary, the new QR code message is sent to Slack when a driver scans a new, previously unassociated QR code during the facility dropoff process for an order.
+As a driver, I want to view upcoming blocks so that I have an understanding of which block I am supposed to work first
+
+As a driver, I want to view pending blocks to accept/reject blocks assigned by admin
+The Driver will be shown the block scheduler page when they open the app for the first time in a day
+
+Driver should be able to view any upcoming blocks or pending blocks [Design]
+
+Driver can click on any block to open block details from where they can accept or reject a pending block or release a block
+[Design]
+
+
+
+Block Labels 
+
+Each block can have different block status and we use different tags to communicate the same with customer 
+
+Block Status → Open 
+Block List Tag → Open 
+Block Details Banner → Banner says “Open Block”
+
+Block Status → Pending
+Block List Tag → Pending 
+Block Details Banner → Pending confirmation
+
+Block Status → Taken by Me
+Block List Tag → Taken by Me 
+Block Details Banner → Taken by Me
+
+Block Status → Upcoming 
+Block List Tag → Upcoming 
+Block Details Banner → Upcoming Block
+
+Block Status → Pending + Upcoming 
+Block List Tag → Pending (Priority)
+Block Details Banner → Pending confirmation (Priority)
+
+
+When to show? 
+Upcoming - 2 hours before block start time uptil the block start time 
+Pending - When admin team assigns a block to driver for him to accept or reject
+Taken by Me - When driver confirms a block which he picked or was assigned + when block is past start time but first task not active 
+Open - Open block which is available for picking
+Active - When the first task in a block is activated, we mark the block as active until the current active task ETC (estimated time of completion) is within the block timings 
+
+All the labels on the block list will be displayed on block details as well
+
+[Rules for CTA buttons]
+If there are any blocks → show go to task list 
+
+If there are any tasks with status Active → Show go to navigation 
+
+If there are no blocks → Don’t show anything
+
+If task status is started S&T → Move driver to S&T screen directly on opening app
+
+If there is any task in the list → We show go to task list CTA 
+https://d-labs.atlassian.net/browse/LH-8894 [Front-end]
+
+
+
+
+
+
+
+BE - Nothing needed from backend here  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+RULES FOR GO TO TASK LIST BUTTON AND UPCOMING AND ACTIVE TAGS
+
+
+Designs Locked + Ready for Dev
+Task List Page
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Task Details Page
+As a driver, I want to access my task list so that I can start working on tasks in my shift
+
+As a driver, I want to see which tasks are completed/failed during my shift 
+
+As a driver, once I complete or fail a task (or if an admin does it), I want to be taken back to the navigator to see the next task
+
+
+As a driver, I want to be able to start a task from the task details page
+
+
+
+To access the task list 
+Location Sharing 
+Internet 
+Background Location Sharing (Android) / Motion and Fitness (iOS)
+should be enabled otherwise we show an error state [Design]
+
+If no tasks are available show an empty state[Design]
+
+The driver should be able to view all the tasks assigned to them in the task list starting from the Facility Pickup task  [Design]
+
+[Updated Rule] - If the driver is assigned tasks then we will show the task in the task list no matter if he has a block or not
+
+First task for the day in Task list will be shown less than 1hr before block start time (only for the first task of the day)
+
+Initially, only the first task of the shift will be displayed (which is almost always Facility Pickup or warehouse pickup) and after the first task is completed, the rest of the task list will be updated [Design]
+
+Current tasks are shown under the Pending section while completed/failed tasks are displayed under the Completed section [Design]
+
+Driver can click on task card to open task detail page from where the driver can use“Hold to start task” CTA [Design]
+
+After completing S&T, the driver will automatically return to the task list and the completed task will move from the Pending to the Completed section
+
+Task Details Ticket
+
+
+Task List Ticket
+
+
+
+API for Task List
+
+
+
+API for Task details
+
+Empty state message copies in the task list need to be updated 
+
+Error state messaging copies need to be updated 
+
+What do we need from BE 
+API for Task list (1.5 day)
+Extract and send shift, tasks, visibility of tasks
+Grouping multiple tasks together  
+Identify same customer with multiple tasks
+API for task details (3 hr)
+Slaven and Ziga to sync here 
+
+ETA - How do we calculate ETA before starting the block based on which we show the delay notification
+Designs Locked (need to change messaging copies only) 
+Navigation Page
+
+
+
+
+
+As a driver, after starting the task I want to see Google Maps navigation and a button to mark that I arrived at the location
+
+
+
+
+
+Driver should be redirected to an in-app navigation page after clicking on “Hold to start task” CTA [Design]
+
+This page will have a CTA that says “I’ve arrived at the location” which will be used to mark the driver arriving at customer location and immediately takes the driver into S&T flow [Design]
+
+This CTA will be inactive until we detect that the driver is within a certain geofence of the customer location coordinates (200m or 2 min)
+
+
+ 
+
+
+Navigation Page Ticket
+Is there anything that needs to be done for Navigation?
+
+Figure out what kind of geofence radius we can have here?
+Design Locked 
+
+Ready for Dev
+Map View Page
+As a driver, I want to view all my tasks via a birds eye view so I can get a good idea of which areas I am going to drive in today
+Drivers can click on the map icon in task list page to open the birds eye view which is basically a map with markers to represent customer locations [Design]
+
+Each marker is clickable and displays the task type (Pickup/Dropoff). After completing a task respective pin will disappear from the map 
+
+Multiple tasks at same location will be represented with a single pin with following in text bubble 
+If pickup and drop in a sequence 
+Line 1: PICK, DROP
+Line 2: #3, #4
+Check for French Translations here (Pick up: Ramasser | Drop off: Déposer)
+
+The map icon throws an error message if no tasks are available to show
+Map View Ticket
+
+
+Designs Locked + Ready for Dev
+Multiple Tasks  
+As a driver, I need to be informed that there are several orders to pick up at the same location
+
+
+
+Multiple tasks at the same location will be grouped as a separate section in the task list with a distinct icon for such tasks [Design]
+
+Multiple Tasks = Tasks in the same location + same time slot
+
+
+
+
+
+
+
+
+Designs Locked + Ready for dev
+Notifications
+As a driver, I want to be notified about new task(s) and changes to Method and/or instructions
+
+
+
+
+
+
+
+
+
+
+As a driver, I need to be informed that my next task is inside a congestion zone so I can prepare myself accordingly
+
+
+As a driver, I want to know when I’m running late so that I can adjust accordingly to avoid delays to customer
+For every 2 tasks added, the driver will see a toast message alerting them of a new task [Design]
+
+During an active task, the driver should see an alert popup anytime customer notes or collection/delivery changes. This should only be displayed on the task navigation screen - Don't need to show this here right now
+[No Design]
+
+
+Any tasks inside a congestion zone will be marked as such in the task list [Design] 
+
+
+
+
+Driver will see a clock icon to notify any delays on the task list screen and a full message in the task details screen [Design] 
+
+The logic here would be 
+User activates task
+Check for ETC and Delay
+If Delay > 1 min, we display the message
+If Delay < 1 min, we don't display anything
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Send LMFS data ticket
+What we need from BE here 
+
+Send LMFS data to mobile app [such as delay or ETA] [2hr]
+
+Toast messages - ziga.hvalec@dlabs.si
+
+
+Designs Locked
+Hamburger Menu
+As a driver, I want to quickly access different sections of the app 
+The driver can click on the menu icon at the top left which will open the hamburger menu. It will have the following links [Design]
+
+Block Schedule (some drivers might not have blocks) 
+Task List 
+Task History 
+Driver Manual
+
+If the driver does not operate in blocks (UAE) then the block schedule section will NOT be shown in the hamburger menu
+Hamburger Menu Ticket
+
+
+Add Flag Ticket
+What we need from BE (1hr)
+Add a flag on the drivers who are using task navigator 
+Send that via api to mobile app  
+Designs Locked + Ready for Dev
+Task History Page
+As a driver, I want to check my task history over the past 7 days in case I want to check how many tasks I completed and when
+
+
+
+
+
+
+No Designs yet
+Notifications Section 
+As a driver, I want to see the communication messages sent to me by LH inside the driver app 
+Provides a section for LH to pass information to our partner drivers via in-app notifications/messages. 
+
+These messages either require some action to be completed or they can be simple read-only messages 
+Figma Link
+
+
+ [PRD] Notifications Page
+Designs Locked + Dev Done 
+
+
+Roadmap 
+For v2 
+Feedback section in Hamburger Menu 
+Driver releases a block 
+Can we show a warning popup before the final confirmation - 
+Can we show the driver the cancellation charges when he’s dropping the block on the popup itself 
+Can we show the drivers how much km is expected to be driven in their Shift  - Task navigator feedback 
+
+
+Requested link
+Universal Link
+Note
+Tested OK?
+Can we add a link to take users to their account page if they are signed in?
+
+https://app.laundryheap.com?redirect=user_info
+
+
+OK WEB 
+OK Android and iOS 5.4.0 (1978)
+Can we add a link to take users to their past order list if they are signed in?
+https://app.laundryheap.com?redirect=past_orders
+
+
+
+
+OK WEB 
+OK Android and iOS 5.4.0 (1978)
+Can we add a link that will take the user to our prices/service page that is specific to their region?
+https://app.laundryheap.com?redirect=prices&country=auto
+
+
+On the web, the link must resolve to the correct service country based on the IP address.
+WEB: “?country=auto”
+OK WEB 
+OK Android and iOS 5.4.0 (1978)
+Can we add a link that will take the user to the booking page that is specific to their region?
+https://app.laundryheap.com/booking?country=auto
+
+
+
+On the web, the link must resolve to the correct service country based on the IP address.
+WEB: “?country=auto”
+OK WEB 
+OK Android and iOS 5.4.0 (1978)
+Can we add a link to take users to view their active bundles?
+https://app.laundryheap.com?redirect=prepaid_packs_active
+
+
+https://app.laundryheap.com?redirect=prepaid_packs
+
+
+
+
+
+OK WEB 
+OK Android and iOS 5.4.0 (1978)
+Link to terms and conditions page that opens in the relevant region
+(weblink only, not mobile app)
+
+
+
+https://www.laundryheap.com/location-redirect?redirect=terms
+On the web, the link must resolve to the correct service country based on the IP address.
+WEB: “?country=auto”
+OK WEB 
+OK Android and iOS 5.4.0 (1978)
+Link to privacy page that opens in the relevant region
+(weblink only, not mobile app)
+https://www.laundryheap.com/location-redirect?redirect=privacy
+On the web, the link must resolve to the correct service country based on the IP address.
+WEB: “?country=auto”
+OK WEB 
+OK Android and iOS 5.4.0 (1978)
+Repeat orders
+https://app.laundryheap.com?redirect=repeat_orders
+
+
+OK WEB 
+OK Android and iOS 5.4.0 (1978)
+Promotions
+https://app.laundryheap.com?redirect=promotions
+
+
+OK WEB 
+OK Android and iOS 5.4.0 (1978)
+Laundryheap+
+https://app.laundryheap.com?redirect=subscriptions
+
+
+OK WEB 
+OK Android and iOS 5.4.0 (1978)
+Gift cards
+https://app.laundryheap.com?redirect=gift_card
+
+
+OK WEB 
+OK Android and iOS 5.4.0 (1978)
+
+
+
+
+Objective
+To increase % of orders with a review from current 8% to at least 30% while ensuring quality, actionable feedback.
+
+How do we ensure an increased review volume?
+Strategic timing of reviews
+Smart use of push notifications and emails, including reminders
+Reduce friction
+Capture data points as soon as available (save each step so we don’t lose data if user drops off halfway through)
+Offer a reward for a comprehensive  review (this will be added later when we have credits in place)
+
+How do we ensure the feedback is actionable?
+
+Ask for driver feedback at the collection
+Ask for service feedback at delivery
+Ensure appropriate delays before prompting, based on whether the interaction is personal or not
+Offer relevant pills, depending on whether the interaction is personal or not
+Production-ready designs
+
+Mobile app: https://www.figma.com/design/PhlZw8b7pxRLTngzrVB1qr/Laundryheap-Mobile-app?node-id=7972-12403&t=6IdMmEUV4d2JeKaY-0
+
+Web app: https://www.figma.com/design/C1ON1H6iJF6hORMwNLbMw1/WEB-APP%2FBooking-flow%2C-Estimator-%26-Dashboard?node-id=4839-15764&t=OPrqrAOSec19c5TY-4
+
+
+Feedback pills
+
+Collection
+
+Personal
+Non-personal
+Bad 1-3 stars
+Good 4-5 stars
+Bad 1-3 stars
+Good 4-5 stars
+Late or too early ⌛️
+Smoothcollection 🚙
+Late or too early ⌛️
+Smoothcollection 🚙
+Wrong location 📍
+
+
+Problems finding bags 🔎
+
+
+Unprofessional appearance 🙎‍
+Professional
+appearance  🙎‍♂️
+Unresponsive 📱
+Professional
+communication  🙎‍♂️
+Poor handling of bags 🤲
+Carefulhandling 🤲
+
+
+
+
+Did not follow instructions 📝
+Followed instructions precisely 📝
+Did not follow instructions 📝
+Followed instructions precisely 📝
+Other
+Other
+Other
+Other
+
+
+Delivery
+
+Personal
+Non-personal
+Bad 1-3 stars
+Good 4-5 stars
+Bad 1-3 stars
+Good 4-5 stars
+Late or too early ⌛️
+Smoothdelivery 🚙
+Late or too early ⌛️
+Smoothdelivery 🚙
+Cleaning instructions not followed 🏷️
+Perfect
+cleaning ✨
+Cleaning instructions not followed 🏷️
+Perfect
+cleaning ✨
+Poor quality of cleaning 🎨
+Neat packing 🎀
+Poor quality of cleaning 🎨
+Neat packing 🎀
+Wrong location 📍
+
+
+Wrong location 📍
+
+
+Driver did not follow instructions 📝
+Driver followed instructions precisely  📝
+Driver did not follow instructions 📝
+Driver followed instructions precisely  📝
+Unprofessional
+appearance 🙎‍
+Professional
+appearance  🙎‍♂️
+
+
+
+
+Poor handling of bags 🤲
+Carefulhandling 🤲
+Bags left in inappropriate
+place 🌧️
+
+
+Problem not listed
+Other
+Problem not listed
+Other
+
+
+* If at least one gray pill is selected we redirect toe the gray RC screen - Figma link
+Details
+Rate the collection
+Order status cards
+After collection is successfully completed, the order status card displays the message “Please help our drivers improve by leaving feedback”. The order detail card displays a CTA “Review collection”. These elements remain on the cards for statuses “On the way to facility” and “At the facility”, unless the collection has already been rated.
+Shipment tracking
+If viewed from the mobile app webview, there is no need to add anything because the bottom sheet from the mobile app will pop up as described below.
+If viewed from a browser, an additional component with the star rating is shown immediately as per design.
+Emails
+We already send a “bag receipt” email when a collection is completed. That email will now include a component with star rating as per design. The component must contain a universal link that opens the mobile app and starts the review process if the app is installed, else it opens the webapp. The link to the webapp must allow the user to rate even if they’re not previously logged into the webapp.
+Mobile app bottom sheet
+The bottom sheet is eligible to appear +5min after the collection time (24h if collection from outside or reception) and up to the time when order is collected from the facility. Bottom sheet can either be dismissed forever (for this collection) or postponed by 24h. If postponed beyond the time when order is collected from the facility, or if already reviewed, then the sheet is no longer eligible to appear
+Mobile app push notification
+The push notification is sent +5min after the collection time (24h if collection from outside or reception). If tapped, the user is taken straight into the review process. If the bottom sheet was postponed by 24h, the push notification is also repeated after 24h, unless the bottom sheet is no longer eligible to appear as per previous paragraph.
+Web app modal popup
+We do not pop any review modals in the web app. Customers must click on the order status card button or the email (above) to start the review process.
+
+Rate the delivery
+Order status cards
+After delivery is successfully completed, the order status card displays the message “Help us by giving feedback”. The order detail card displays a CTA “Review our service”. These elements remain on the cards for statuses for 7 days, unless the service has already been rated.
+Shipment tracking
+If viewed from the mobile app webview, there is no need to add anything because the bottom sheet from the mobile app will pop up as described earlier.
+If viewed from a browser, an additional component with the star rating is shown immediately as per design.
+Emails
+“Review our service” email is sent 2h after successful personal delivery (24h if collection from outside or reception). The email is sent only once per order, after first successful delivery, in case there are multiple deliveries.  The component must contain a universal link that opens the mobile app and starts the review process if the app is installed, else it opens the webapp. The link to the webapp must allow the user to rate even if they’re not previously logged into the webapp.
+Mobile app bottom sheet
+The bottom sheet is eligible to appear 24h after the delivery time (48h if delivery from outside or reception) and up to 7 days later. Bottom sheet can either be dismissed forever (for this delivery) or postponed by 24h. If postponed beyond 7 days, or if already reviewed, then the sheet is no longer eligible to appear.
+Mobile app push notification
+The push notification is sent 24h after the delivery time (48h if delivery from outside or reception). If tapped, the user is taken straight into the review process. If the bottom sheet was postponed by 24h, the push notification is also repeated after 24h, unless the bottom sheet is no longer eligible to appear as per previous paragraph.
+Web app modal popup
+We do not pop any review modals in the web app. Customers must click on the order status card button or the email (above) to start the review process.
+Review process & backend considerations
+We must save data at every step (rating, pills, text area), so if a customer only rates the stars but then doesn’t proceed we at least have the star rating.
+The old review options configurator should be removed to avoid confusion.
+The review schema should be compatible with the old one (star rating, pills, text area). Please ensure the mapping remains the same and that downstream functionality is unaffected (Slack notifications for bad reviews, Intercom/customer.io events, BO review pages, …)
+Frontend considerations
+We’ll use Lottie for the thank you animation.
+Tapping/clicking on stars triggers an on/press state, briefly showing the selected stars as confirmation before moving to the next stage.ange 
+Ignore the credits placeholder box for now.
+Both mobile app and webapp should send the following Posthog and UXcam events
+Driver review:
+driver_review_started
+driver_review_stars_submitted (event property stars = [1-5])
+driver_review_pills_submitted
+driver_review_comment_submitted (this is effectively when the review is fully complete)
+driver_review_remind_later (when user taps “remind later”)
+Service review:
+service_review_started
+service_review_stars_submitted (event property stars = [1-5])
+service_review_pills_submitted
+service_review_comment_submitted (this is effectively when the review is fully complete)
+service_review_remind_later (when user taps “remind later”)
+
+
+
+Q&A
+Add any questions here or start a comment thread with the relevant functionality
+
+What if RA is triggered when collection the order?
+RA only affects the order status cards in that a different CTA is shown. RA indeed should have a priority over the review as discussed. But that should not affected the push notifications or emails - if use clicks on the email link to review or push notification, they should be able to leave a review regardless of whether a RA response is needed or not
+
+
+Pills should be editable via database. The old review options configurator should be removed to avoid confusion.
+
+List of pills are now hardcoded and can be changed with additional commit. Can I leave it as it is?
+Yes
+
+The review schema should be compatible with the old one (star rating, pills, text area). Please ensure the mapping remains the same and that downstream functionality is unaffected (Slack notifications for bad reviews, Intercom/customer.io events, BO review pages, …)
+
+In current driver review process customer sends a review in one step. We have all information (star, review option, additional comment) and if score is <= 3 and if any selected option has customer comment we send slack notification with all the data. 
+
+In new flow customer first sends score, then optional review options and later optional additional comment. We can send slack notification immediately but this means we won’t have reviewed options and additional comments OR I can schedule a job which will send slack notification x minute later assuming customer will finish with the driver review (reviewed options, additional comment)
+Yes let's schedule a job to send the review notification 30min later with all the details we have at that point.
+
+When do we automatically show bottom sheet on mobie app? Do i show it on every screen that lists the orders(dashboard, resolution center, past orders) and on order details screens? Or any other as well?
+We agreed that you show these where data is readily available - no need to make additional API calls on every single screen
+
+
+
+
+
+Panic mode
+Laundryheap is down… what to do?!
+
+These instructions are only if the backend stopped working. If the backend stopped working, mobile, web app, admin, etc., all stop working. 
+
+
+	
+ What to do (If I am not Slaven, Gašper or Andraž)?
+Call them first
+Chuck Norris 114
+Slaven Stančič - 041 810 164
+Gašper Hafner - 040 211 938
+Andraž Trošt - 040 350 966
+If you don’t have access to AWS, then just let everybody know via #laundryheap channel that site is not working and there is nothing else for you to do, but if you have access to AWS proceed with instructions
+Write to #laundryheap channel that you will be rebooting a server
+Reboot the whole machine using AWS Console, make sure you are using “eu-west-1 Ireland” region
+
+Check if site is working and let others on #laundryheap channel know that everything is fine now, or that it still does not work after restart
+Even if the site is still not working, there is nothing else for you to do
+
+
+
+What to do (If I am Slaven, Gašper or Andraž)?
+You can still follow the above instructions, but you already knew that didn’t you?! 🙂
+
+We will cover the most common scenarios. When you SSH to the server now, you get a status of all services and a list of useful commands that can help you with debugging. 
+
+Usual culprits (in order of probability):
+All resources are used (CPU usage on server at 100% or CPU usage on database server at 100% or memory usage at 100% …)
+Faulty deploy (someone just deployed unworking version and went for lunch)
+Anything else
+
+All resources are used
+Check DataDog if CPU is at 100%, if CPU on database or app server is at 100% this is probably the reason why site is not responding
+If it’s app server CPU that is at 100%, either wait or restart services using “lh-restart-all” or restart the whole server using AWS console
+
+Faulty deploy
+Connect to VPN
+SSH to production server
+“lh-list-releases” will show you last 5 releases
+“lh-set-release” will set the release to the one you specify (it will change the link to the correct directory and also restart puma, sidekiq, sidekiq-sheet)
+
+
+Anything else
+Check if all services are running with “lh-status-quick-all”
+You can restart all services using “lh-restart-all” or “lh-restart”
+If a service is not running, or keeps restarting check log with “sudo journalctl -u [service] -S -2hr”
+
+
+
+
+Create instance from snapshot (Only if I am Slaven, Gašper or Andraž)
+If everything else fails, you can try to recreate an instance from a daily snapshot.
+
+Shutdown the server that is not working
+List AWS EC2 AMI images by date of creation
+
+Launch instances from AMI that you selected
+Give it a name - same name as before + current date
+Choose same instance type as it was before (you can check this on list of EC2 instances)
+Choose key pair - andraz.trost@dlabs.si
+Select existing security groups (check which ones are currently used by the instance you are trying to recreate and use the same) Be careful to really choose the same ones, there are some with very similar names!
+Leave all other settings as they are by default
+Lunch instance
+Change elastic IP to point to new instance instead, this will make it possible to connect to instance via SSH using the same configuration as before and it will also mean deploys with CircleCI will go to this instance from now on
+First disassociate elastic IP from current instance (AWS instructions)
+
+Associate elastic IP to new instance (AWS instructions)
+
+Check if SSH works and all services are started (it will probably give you a warning when you try to connect, you can fix this with “ssh-keygen -R <IP of the server>”)
+Add new instance to target group and remove the old instance from it, this will direct all traffic from load balancer to go to the new instance
+First remove current instance from target group - deregister it (AWS instructions)
+
+Add new instance to target group - register it (AWS instructions), first click Include is as pending below, then click Register pending targets
+Check if site works
+
+
