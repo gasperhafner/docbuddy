@@ -1,3 +1,281 @@
+
+Panic mode
+Laundryheap is down… what to do?!
+
+These instructions are only if the backend stopped working. If the backend stopped working, mobile, web app, admin, etc., all stop working. 
+
+
+	
+ What to do (If I am not Slaven, Gašper or Andraž)?
+Call them first
+Chuck Norris 114
+Slaven Stančič - 041 810 164
+Gašper Hafner - 040 211 938
+Andraž Trošt - 040 350 966
+If you don’t have access to AWS, then just let everybody know via #laundryheap channel that site is not working and there is nothing else for you to do, but if you have access to AWS proceed with instructions
+Write to #laundryheap channel that you will be rebooting a server
+Reboot the whole machine using AWS Console, make sure you are using “eu-west-1 Ireland” region
+
+Check if site is working and let others on #laundryheap channel know that everything is fine now, or that it still does not work after restart
+Even if the site is still not working, there is nothing else for you to do
+
+
+
+What to do (If I am Slaven, Gašper or Andraž)?
+You can still follow the above instructions, but you already knew that didn’t you?! 🙂
+
+We will cover the most common scenarios. When you SSH to the server now, you get a status of all services and a list of useful commands that can help you with debugging. 
+
+Usual culprits (in order of probability):
+All resources are used (CPU usage on server at 100% or CPU usage on database server at 100% or memory usage at 100% …)
+Faulty deploy (someone just deployed unworking version and went for lunch)
+Anything else
+
+All resources are used
+Check DataDog if CPU is at 100%, if CPU on database or app server is at 100% this is probably the reason why site is not responding
+If it’s app server CPU that is at 100%, either wait or restart services using “lh-restart-all” or restart the whole server using AWS console
+
+Faulty deploy
+Connect to VPN
+SSH to production server
+“lh-list-releases” will show you last 5 releases
+“lh-set-release” will set the release to the one you specify (it will change the link to the correct directory and also restart puma, sidekiq, sidekiq-sheet)
+
+
+Anything else
+Check if all services are running with “lh-status-quick-all”
+You can restart all services using “lh-restart-all” or “lh-restart”
+If a service is not running, or keeps restarting check log with “sudo journalctl -u [service] -S -2hr”
+
+
+
+
+Create instance from snapshot (Only if I am Slaven, Gašper or Andraž)
+If everything else fails, you can try to recreate an instance from a daily snapshot.
+
+Shutdown the server that is not working
+List AWS EC2 AMI images by date of creation
+
+Launch instances from AMI that you selected
+Give it a name - same name as before + current date
+Choose same instance type as it was before (you can check this on list of EC2 instances)
+Choose key pair - andraz.trost@dlabs.si
+Select existing security groups (check which ones are currently used by the instance you are trying to recreate and use the same) Be careful to really choose the same ones, there are some with very similar names!
+Leave all other settings as they are by default
+Lunch instance
+Change elastic IP to point to new instance instead, this will make it possible to connect to instance via SSH using the same configuration as before and it will also mean deploys with CircleCI will go to this instance from now on
+First disassociate elastic IP from current instance (AWS instructions)
+
+Associate elastic IP to new instance (AWS instructions)
+
+Check if SSH works and all services are started (it will probably give you a warning when you try to connect, you can fix this with “ssh-keygen -R <IP of the server>”)
+Add new instance to target group and remove the old instance from it, this will direct all traffic from load balancer to go to the new instance
+First remove current instance from target group - deregister it (AWS instructions)
+
+Add new instance to target group - register it (AWS instructions), first click Include is as pending below, then click Register pending targets
+Check if site works
+
+
+Objective
+To increase % of orders with a review from current 8% to at least 30% while ensuring quality, actionable feedback.
+
+How do we ensure an increased review volume?
+Strategic timing of reviews
+Smart use of push notifications and emails, including reminders
+Reduce friction
+Capture data points as soon as available (save each step so we don’t lose data if user drops off halfway through)
+Offer a reward for a comprehensive  review (this will be added later when we have credits in place)
+
+How do we ensure the feedback is actionable?
+
+Ask for driver feedback at the collection
+Ask for service feedback at delivery
+Ensure appropriate delays before prompting, based on whether the interaction is personal or not
+Offer relevant pills, depending on whether the interaction is personal or not
+Production-ready designs
+
+Mobile app: https://www.figma.com/design/PhlZw8b7pxRLTngzrVB1qr/Laundryheap-Mobile-app?node-id=7972-12403&t=6IdMmEUV4d2JeKaY-0
+
+Web app: https://www.figma.com/design/C1ON1H6iJF6hORMwNLbMw1/WEB-APP%2FBooking-flow%2C-Estimator-%26-Dashboard?node-id=4839-15764&t=OPrqrAOSec19c5TY-4
+
+
+Feedback pills
+
+Collection
+
+Personal
+Non-personal
+Bad 1-3 stars
+Good 4-5 stars
+Bad 1-3 stars
+Good 4-5 stars
+Late or too early ⌛️
+Smoothcollection 🚙
+Late or too early ⌛️
+Smoothcollection 🚙
+Wrong location 📍
+
+
+Problems finding bags 🔎
+
+
+Unprofessional appearance 🙎‍
+Professional
+appearance  🙎‍♂️
+Unresponsive 📱
+Professional
+communication  🙎‍♂️
+Poor handling of bags 🤲
+Carefulhandling 🤲
+
+
+
+
+Did not follow instructions 📝
+Followed instructions precisely 📝
+Did not follow instructions 📝
+Followed instructions precisely 📝
+Other
+Other
+Other
+Other
+
+
+Delivery
+
+Personal
+Non-personal
+Bad 1-3 stars
+Good 4-5 stars
+Bad 1-3 stars
+Good 4-5 stars
+Late or too early ⌛️
+Smoothdelivery 🚙
+Late or too early ⌛️
+Smoothdelivery 🚙
+Cleaning instructions not followed 🏷️
+Perfect
+cleaning ✨
+Cleaning instructions not followed 🏷️
+Perfect
+cleaning ✨
+Poor quality of cleaning 🎨
+Neat packing 🎀
+Poor quality of cleaning 🎨
+Neat packing 🎀
+Wrong location 📍
+
+
+Wrong location 📍
+
+
+Driver did not follow instructions 📝
+Driver followed instructions precisely  📝
+Driver did not follow instructions 📝
+Driver followed instructions precisely  📝
+Unprofessional
+appearance 🙎‍
+Professional
+appearance  🙎‍♂️
+
+
+
+
+Poor handling of bags 🤲
+Carefulhandling 🤲
+Bags left in inappropriate
+place 🌧️
+
+
+Problem not listed
+Other
+Problem not listed
+Other
+
+
+* If at least one gray pill is selected we redirect toe the gray RC screen - Figma link
+Details
+Rate the collection
+Order status cards
+After collection is successfully completed, the order status card displays the message “Please help our drivers improve by leaving feedback”. The order detail card displays a CTA “Review collection”. These elements remain on the cards for statuses “On the way to facility” and “At the facility”, unless the collection has already been rated.
+Shipment tracking
+If viewed from the mobile app webview, there is no need to add anything because the bottom sheet from the mobile app will pop up as described below.
+If viewed from a browser, an additional component with the star rating is shown immediately as per design.
+Emails
+We already send a “bag receipt” email when a collection is completed. That email will now include a component with star rating as per design. The component must contain a universal link that opens the mobile app and starts the review process if the app is installed, else it opens the webapp. The link to the webapp must allow the user to rate even if they’re not previously logged into the webapp.
+Mobile app bottom sheet
+The bottom sheet is eligible to appear +5min after the collection time (24h if collection from outside or reception) and up to the time when order is collected from the facility. Bottom sheet can either be dismissed forever (for this collection) or postponed by 24h. If postponed beyond the time when order is collected from the facility, or if already reviewed, then the sheet is no longer eligible to appear
+Mobile app push notification
+The push notification is sent +5min after the collection time (24h if collection from outside or reception). If tapped, the user is taken straight into the review process. If the bottom sheet was postponed by 24h, the push notification is also repeated after 24h, unless the bottom sheet is no longer eligible to appear as per previous paragraph.
+Web app modal popup
+We do not pop any review modals in the web app. Customers must click on the order status card button or the email (above) to start the review process.
+
+Rate the delivery
+Order status cards
+After delivery is successfully completed, the order status card displays the message “Help us by giving feedback”. The order detail card displays a CTA “Review our service”. These elements remain on the cards for statuses for 7 days, unless the service has already been rated.
+Shipment tracking
+If viewed from the mobile app webview, there is no need to add anything because the bottom sheet from the mobile app will pop up as described earlier.
+If viewed from a browser, an additional component with the star rating is shown immediately as per design.
+Emails
+“Review our service” email is sent 2h after successful personal delivery (24h if collection from outside or reception). The email is sent only once per order, after first successful delivery, in case there are multiple deliveries.  The component must contain a universal link that opens the mobile app and starts the review process if the app is installed, else it opens the webapp. The link to the webapp must allow the user to rate even if they’re not previously logged into the webapp.
+Mobile app bottom sheet
+The bottom sheet is eligible to appear 24h after the delivery time (48h if delivery from outside or reception) and up to 7 days later. Bottom sheet can either be dismissed forever (for this delivery) or postponed by 24h. If postponed beyond 7 days, or if already reviewed, then the sheet is no longer eligible to appear.
+Mobile app push notification
+The push notification is sent 24h after the delivery time (48h if delivery from outside or reception). If tapped, the user is taken straight into the review process. If the bottom sheet was postponed by 24h, the push notification is also repeated after 24h, unless the bottom sheet is no longer eligible to appear as per previous paragraph.
+Web app modal popup
+We do not pop any review modals in the web app. Customers must click on the order status card button or the email (above) to start the review process.
+Review process & backend considerations
+We must save data at every step (rating, pills, text area), so if a customer only rates the stars but then doesn’t proceed we at least have the star rating.
+The old review options configurator should be removed to avoid confusion.
+The review schema should be compatible with the old one (star rating, pills, text area). Please ensure the mapping remains the same and that downstream functionality is unaffected (Slack notifications for bad reviews, Intercom/customer.io events, BO review pages, …)
+Frontend considerations
+We’ll use Lottie for the thank you animation.
+Tapping/clicking on stars triggers an on/press state, briefly showing the selected stars as confirmation before moving to the next stage.ange 
+Ignore the credits placeholder box for now.
+Both mobile app and webapp should send the following Posthog and UXcam events
+Driver review:
+driver_review_started
+driver_review_stars_submitted (event property stars = [1-5])
+driver_review_pills_submitted
+driver_review_comment_submitted (this is effectively when the review is fully complete)
+driver_review_remind_later (when user taps “remind later”)
+Service review:
+service_review_started
+service_review_stars_submitted (event property stars = [1-5])
+service_review_pills_submitted
+service_review_comment_submitted (this is effectively when the review is fully complete)
+service_review_remind_later (when user taps “remind later”)
+
+
+
+Q&A
+Add any questions here or start a comment thread with the relevant functionality
+
+What if RA is triggered when collection the order?
+RA only affects the order status cards in that a different CTA is shown. RA indeed should have a priority over the review as discussed. But that should not affected the push notifications or emails - if use clicks on the email link to review or push notification, they should be able to leave a review regardless of whether a RA response is needed or not
+
+
+Pills should be editable via database. The old review options configurator should be removed to avoid confusion.
+
+List of pills are now hardcoded and can be changed with additional commit. Can I leave it as it is?
+Yes
+
+The review schema should be compatible with the old one (star rating, pills, text area). Please ensure the mapping remains the same and that downstream functionality is unaffected (Slack notifications for bad reviews, Intercom/customer.io events, BO review pages, …)
+
+In current driver review process customer sends a review in one step. We have all information (star, review option, additional comment) and if score is <= 3 and if any selected option has customer comment we send slack notification with all the data. 
+
+In new flow customer first sends score, then optional review options and later optional additional comment. We can send slack notification immediately but this means we won’t have reviewed options and additional comments OR I can schedule a job which will send slack notification x minute later assuming customer will finish with the driver review (reviewed options, additional comment)
+Yes let's schedule a job to send the review notification 30min later with all the details we have at that point.
+
+When do we automatically show bottom sheet on mobie app? Do i show it on every screen that lists the orders(dashboard, resolution center, past orders) and on order details screens? Or any other as well?
+We agreed that you show these where data is readily available - no need to make additional API calls on every single screen
+
+Ï
+Press release
+Key challenges
+User stories
+Figma Link
+
 Press release
 Laundryheap Unveils Enhanced In-House Driver App to Optimize Delivery Operations
 London, 19th Dec – Laundryheap, a leading provider of on-demand laundry services, is excited to announce a major update to its driver app, transitioning from the existing Onfleet platform to a robust in-house solution built from the ground up. This strategic move aims to overcome limitations observed in the previous system, providing an enhanced user experience for drivers while maintaining and expanding essential functionalities.
@@ -490,373 +768,3 @@ Driver releases a block
 Can we show a warning popup before the final confirmation - 
 Can we show the driver the cancellation charges when he’s dropping the block on the popup itself 
 Can we show the drivers how much km is expected to be driven in their Shift  - Task navigator feedback 
-
-
-Requested link
-Universal Link
-Note
-Tested OK?
-Can we add a link to take users to their account page if they are signed in?
-
-https://app.laundryheap.com?redirect=user_info
-
-
-OK WEB 
-OK Android and iOS 5.4.0 (1978)
-Can we add a link to take users to their past order list if they are signed in?
-https://app.laundryheap.com?redirect=past_orders
-
-
-
-
-OK WEB 
-OK Android and iOS 5.4.0 (1978)
-Can we add a link that will take the user to our prices/service page that is specific to their region?
-https://app.laundryheap.com?redirect=prices&country=auto
-
-
-On the web, the link must resolve to the correct service country based on the IP address.
-WEB: “?country=auto”
-OK WEB 
-OK Android and iOS 5.4.0 (1978)
-Can we add a link that will take the user to the booking page that is specific to their region?
-https://app.laundryheap.com/booking?country=auto
-
-
-
-On the web, the link must resolve to the correct service country based on the IP address.
-WEB: “?country=auto”
-OK WEB 
-OK Android and iOS 5.4.0 (1978)
-Can we add a link to take users to view their active bundles?
-https://app.laundryheap.com?redirect=prepaid_packs_active
-
-
-https://app.laundryheap.com?redirect=prepaid_packs
-
-
-
-
-
-OK WEB 
-OK Android and iOS 5.4.0 (1978)
-Link to terms and conditions page that opens in the relevant region
-(weblink only, not mobile app)
-
-
-
-https://www.laundryheap.com/location-redirect?redirect=terms
-On the web, the link must resolve to the correct service country based on the IP address.
-WEB: “?country=auto”
-OK WEB 
-OK Android and iOS 5.4.0 (1978)
-Link to privacy page that opens in the relevant region
-(weblink only, not mobile app)
-https://www.laundryheap.com/location-redirect?redirect=privacy
-On the web, the link must resolve to the correct service country based on the IP address.
-WEB: “?country=auto”
-OK WEB 
-OK Android and iOS 5.4.0 (1978)
-Repeat orders
-https://app.laundryheap.com?redirect=repeat_orders
-
-
-OK WEB 
-OK Android and iOS 5.4.0 (1978)
-Promotions
-https://app.laundryheap.com?redirect=promotions
-
-
-OK WEB 
-OK Android and iOS 5.4.0 (1978)
-Laundryheap+
-https://app.laundryheap.com?redirect=subscriptions
-
-
-OK WEB 
-OK Android and iOS 5.4.0 (1978)
-Gift cards
-https://app.laundryheap.com?redirect=gift_card
-
-
-OK WEB 
-OK Android and iOS 5.4.0 (1978)
-
-
-
-
-Objective
-To increase % of orders with a review from current 8% to at least 30% while ensuring quality, actionable feedback.
-
-How do we ensure an increased review volume?
-Strategic timing of reviews
-Smart use of push notifications and emails, including reminders
-Reduce friction
-Capture data points as soon as available (save each step so we don’t lose data if user drops off halfway through)
-Offer a reward for a comprehensive  review (this will be added later when we have credits in place)
-
-How do we ensure the feedback is actionable?
-
-Ask for driver feedback at the collection
-Ask for service feedback at delivery
-Ensure appropriate delays before prompting, based on whether the interaction is personal or not
-Offer relevant pills, depending on whether the interaction is personal or not
-Production-ready designs
-
-Mobile app: https://www.figma.com/design/PhlZw8b7pxRLTngzrVB1qr/Laundryheap-Mobile-app?node-id=7972-12403&t=6IdMmEUV4d2JeKaY-0
-
-Web app: https://www.figma.com/design/C1ON1H6iJF6hORMwNLbMw1/WEB-APP%2FBooking-flow%2C-Estimator-%26-Dashboard?node-id=4839-15764&t=OPrqrAOSec19c5TY-4
-
-
-Feedback pills
-
-Collection
-
-Personal
-Non-personal
-Bad 1-3 stars
-Good 4-5 stars
-Bad 1-3 stars
-Good 4-5 stars
-Late or too early ⌛️
-Smoothcollection 🚙
-Late or too early ⌛️
-Smoothcollection 🚙
-Wrong location 📍
-
-
-Problems finding bags 🔎
-
-
-Unprofessional appearance 🙎‍
-Professional
-appearance  🙎‍♂️
-Unresponsive 📱
-Professional
-communication  🙎‍♂️
-Poor handling of bags 🤲
-Carefulhandling 🤲
-
-
-
-
-Did not follow instructions 📝
-Followed instructions precisely 📝
-Did not follow instructions 📝
-Followed instructions precisely 📝
-Other
-Other
-Other
-Other
-
-
-Delivery
-
-Personal
-Non-personal
-Bad 1-3 stars
-Good 4-5 stars
-Bad 1-3 stars
-Good 4-5 stars
-Late or too early ⌛️
-Smoothdelivery 🚙
-Late or too early ⌛️
-Smoothdelivery 🚙
-Cleaning instructions not followed 🏷️
-Perfect
-cleaning ✨
-Cleaning instructions not followed 🏷️
-Perfect
-cleaning ✨
-Poor quality of cleaning 🎨
-Neat packing 🎀
-Poor quality of cleaning 🎨
-Neat packing 🎀
-Wrong location 📍
-
-
-Wrong location 📍
-
-
-Driver did not follow instructions 📝
-Driver followed instructions precisely  📝
-Driver did not follow instructions 📝
-Driver followed instructions precisely  📝
-Unprofessional
-appearance 🙎‍
-Professional
-appearance  🙎‍♂️
-
-
-
-
-Poor handling of bags 🤲
-Carefulhandling 🤲
-Bags left in inappropriate
-place 🌧️
-
-
-Problem not listed
-Other
-Problem not listed
-Other
-
-
-* If at least one gray pill is selected we redirect toe the gray RC screen - Figma link
-Details
-Rate the collection
-Order status cards
-After collection is successfully completed, the order status card displays the message “Please help our drivers improve by leaving feedback”. The order detail card displays a CTA “Review collection”. These elements remain on the cards for statuses “On the way to facility” and “At the facility”, unless the collection has already been rated.
-Shipment tracking
-If viewed from the mobile app webview, there is no need to add anything because the bottom sheet from the mobile app will pop up as described below.
-If viewed from a browser, an additional component with the star rating is shown immediately as per design.
-Emails
-We already send a “bag receipt” email when a collection is completed. That email will now include a component with star rating as per design. The component must contain a universal link that opens the mobile app and starts the review process if the app is installed, else it opens the webapp. The link to the webapp must allow the user to rate even if they’re not previously logged into the webapp.
-Mobile app bottom sheet
-The bottom sheet is eligible to appear +5min after the collection time (24h if collection from outside or reception) and up to the time when order is collected from the facility. Bottom sheet can either be dismissed forever (for this collection) or postponed by 24h. If postponed beyond the time when order is collected from the facility, or if already reviewed, then the sheet is no longer eligible to appear
-Mobile app push notification
-The push notification is sent +5min after the collection time (24h if collection from outside or reception). If tapped, the user is taken straight into the review process. If the bottom sheet was postponed by 24h, the push notification is also repeated after 24h, unless the bottom sheet is no longer eligible to appear as per previous paragraph.
-Web app modal popup
-We do not pop any review modals in the web app. Customers must click on the order status card button or the email (above) to start the review process.
-
-Rate the delivery
-Order status cards
-After delivery is successfully completed, the order status card displays the message “Help us by giving feedback”. The order detail card displays a CTA “Review our service”. These elements remain on the cards for statuses for 7 days, unless the service has already been rated.
-Shipment tracking
-If viewed from the mobile app webview, there is no need to add anything because the bottom sheet from the mobile app will pop up as described earlier.
-If viewed from a browser, an additional component with the star rating is shown immediately as per design.
-Emails
-“Review our service” email is sent 2h after successful personal delivery (24h if collection from outside or reception). The email is sent only once per order, after first successful delivery, in case there are multiple deliveries.  The component must contain a universal link that opens the mobile app and starts the review process if the app is installed, else it opens the webapp. The link to the webapp must allow the user to rate even if they’re not previously logged into the webapp.
-Mobile app bottom sheet
-The bottom sheet is eligible to appear 24h after the delivery time (48h if delivery from outside or reception) and up to 7 days later. Bottom sheet can either be dismissed forever (for this delivery) or postponed by 24h. If postponed beyond 7 days, or if already reviewed, then the sheet is no longer eligible to appear.
-Mobile app push notification
-The push notification is sent 24h after the delivery time (48h if delivery from outside or reception). If tapped, the user is taken straight into the review process. If the bottom sheet was postponed by 24h, the push notification is also repeated after 24h, unless the bottom sheet is no longer eligible to appear as per previous paragraph.
-Web app modal popup
-We do not pop any review modals in the web app. Customers must click on the order status card button or the email (above) to start the review process.
-Review process & backend considerations
-We must save data at every step (rating, pills, text area), so if a customer only rates the stars but then doesn’t proceed we at least have the star rating.
-The old review options configurator should be removed to avoid confusion.
-The review schema should be compatible with the old one (star rating, pills, text area). Please ensure the mapping remains the same and that downstream functionality is unaffected (Slack notifications for bad reviews, Intercom/customer.io events, BO review pages, …)
-Frontend considerations
-We’ll use Lottie for the thank you animation.
-Tapping/clicking on stars triggers an on/press state, briefly showing the selected stars as confirmation before moving to the next stage.ange 
-Ignore the credits placeholder box for now.
-Both mobile app and webapp should send the following Posthog and UXcam events
-Driver review:
-driver_review_started
-driver_review_stars_submitted (event property stars = [1-5])
-driver_review_pills_submitted
-driver_review_comment_submitted (this is effectively when the review is fully complete)
-driver_review_remind_later (when user taps “remind later”)
-Service review:
-service_review_started
-service_review_stars_submitted (event property stars = [1-5])
-service_review_pills_submitted
-service_review_comment_submitted (this is effectively when the review is fully complete)
-service_review_remind_later (when user taps “remind later”)
-
-
-
-Q&A
-Add any questions here or start a comment thread with the relevant functionality
-
-What if RA is triggered when collection the order?
-RA only affects the order status cards in that a different CTA is shown. RA indeed should have a priority over the review as discussed. But that should not affected the push notifications or emails - if use clicks on the email link to review or push notification, they should be able to leave a review regardless of whether a RA response is needed or not
-
-
-Pills should be editable via database. The old review options configurator should be removed to avoid confusion.
-
-List of pills are now hardcoded and can be changed with additional commit. Can I leave it as it is?
-Yes
-
-The review schema should be compatible with the old one (star rating, pills, text area). Please ensure the mapping remains the same and that downstream functionality is unaffected (Slack notifications for bad reviews, Intercom/customer.io events, BO review pages, …)
-
-In current driver review process customer sends a review in one step. We have all information (star, review option, additional comment) and if score is <= 3 and if any selected option has customer comment we send slack notification with all the data. 
-
-In new flow customer first sends score, then optional review options and later optional additional comment. We can send slack notification immediately but this means we won’t have reviewed options and additional comments OR I can schedule a job which will send slack notification x minute later assuming customer will finish with the driver review (reviewed options, additional comment)
-Yes let's schedule a job to send the review notification 30min later with all the details we have at that point.
-
-When do we automatically show bottom sheet on mobie app? Do i show it on every screen that lists the orders(dashboard, resolution center, past orders) and on order details screens? Or any other as well?
-We agreed that you show these where data is readily available - no need to make additional API calls on every single screen
-
-
-
-
-
-Panic mode
-Laundryheap is down… what to do?!
-
-These instructions are only if the backend stopped working. If the backend stopped working, mobile, web app, admin, etc., all stop working. 
-
-
-	
- What to do (If I am not Slaven, Gašper or Andraž)?
-Call them first
-Chuck Norris 114
-Slaven Stančič - 041 810 164
-Gašper Hafner - 040 211 938
-Andraž Trošt - 040 350 966
-If you don’t have access to AWS, then just let everybody know via #laundryheap channel that site is not working and there is nothing else for you to do, but if you have access to AWS proceed with instructions
-Write to #laundryheap channel that you will be rebooting a server
-Reboot the whole machine using AWS Console, make sure you are using “eu-west-1 Ireland” region
-
-Check if site is working and let others on #laundryheap channel know that everything is fine now, or that it still does not work after restart
-Even if the site is still not working, there is nothing else for you to do
-
-
-
-What to do (If I am Slaven, Gašper or Andraž)?
-You can still follow the above instructions, but you already knew that didn’t you?! 🙂
-
-We will cover the most common scenarios. When you SSH to the server now, you get a status of all services and a list of useful commands that can help you with debugging. 
-
-Usual culprits (in order of probability):
-All resources are used (CPU usage on server at 100% or CPU usage on database server at 100% or memory usage at 100% …)
-Faulty deploy (someone just deployed unworking version and went for lunch)
-Anything else
-
-All resources are used
-Check DataDog if CPU is at 100%, if CPU on database or app server is at 100% this is probably the reason why site is not responding
-If it’s app server CPU that is at 100%, either wait or restart services using “lh-restart-all” or restart the whole server using AWS console
-
-Faulty deploy
-Connect to VPN
-SSH to production server
-“lh-list-releases” will show you last 5 releases
-“lh-set-release” will set the release to the one you specify (it will change the link to the correct directory and also restart puma, sidekiq, sidekiq-sheet)
-
-
-Anything else
-Check if all services are running with “lh-status-quick-all”
-You can restart all services using “lh-restart-all” or “lh-restart”
-If a service is not running, or keeps restarting check log with “sudo journalctl -u [service] -S -2hr”
-
-
-
-
-Create instance from snapshot (Only if I am Slaven, Gašper or Andraž)
-If everything else fails, you can try to recreate an instance from a daily snapshot.
-
-Shutdown the server that is not working
-List AWS EC2 AMI images by date of creation
-
-Launch instances from AMI that you selected
-Give it a name - same name as before + current date
-Choose same instance type as it was before (you can check this on list of EC2 instances)
-Choose key pair - andraz.trost@dlabs.si
-Select existing security groups (check which ones are currently used by the instance you are trying to recreate and use the same) Be careful to really choose the same ones, there are some with very similar names!
-Leave all other settings as they are by default
-Lunch instance
-Change elastic IP to point to new instance instead, this will make it possible to connect to instance via SSH using the same configuration as before and it will also mean deploys with CircleCI will go to this instance from now on
-First disassociate elastic IP from current instance (AWS instructions)
-
-Associate elastic IP to new instance (AWS instructions)
-
-Check if SSH works and all services are started (it will probably give you a warning when you try to connect, you can fix this with “ssh-keygen -R <IP of the server>”)
-Add new instance to target group and remove the old instance from it, this will direct all traffic from load balancer to go to the new instance
-First remove current instance from target group - deregister it (AWS instructions)
-
-Add new instance to target group - register it (AWS instructions), first click Include is as pending below, then click Register pending targets
-Check if site works
-
-
